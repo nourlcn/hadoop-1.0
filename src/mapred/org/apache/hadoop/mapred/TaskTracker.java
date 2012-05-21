@@ -1657,6 +1657,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         lastHeartbeat = System.currentTimeMillis();
         
         // Check if the map-event list needs purging
+        ////TODO  Dn't know what's the meaning of this paragraph.
         Set<JobID> jobs = heartbeatResponse.getRecoveredJobs();
         if (jobs.size() > 0) {
           synchronized (this) {
@@ -1770,6 +1771,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    * @return false if the tracker was unknown
    * @throws IOException
    */
+  ////TODO in heartbeat, should contain ShuffleTask Status.
   HeartbeatResponse transmitHeartBeat(long now) throws IOException {
     // Send Counters in the status once every COUNTER_UPDATE_INTERVAL
     boolean sendCounters;
@@ -2262,6 +2264,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     
   private TaskLauncher mapLauncher;
   private TaskLauncher reduceLauncher;
+  ////TODO add ShuffleLauncher.
   public JvmManager getJvmManagerInstance() {
     return jvmManager;
   }
@@ -2294,8 +2297,12 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
     public void addToTaskQueue(LaunchTaskAction action) {
       synchronized (tasksToLaunch) {
+    	  ////add into tasks,runningTasks,incr map/reduceTotal
         TaskInProgress tip = registerTask(action, this);
+        ////task to launch list
         tasksToLaunch.add(tip);
+        ////wake up thread to exec one task in tasksToLaunch.
+        //// TaskTracker.startNewTask() to run new task from tasksToLaunch.
         tasksToLaunch.notifyAll();
       }
     }
@@ -2491,6 +2498,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    */
   public void run() {
     try {
+    	////start managing the log
       getUserLogManager().start();
       startCleanupThreads();
       boolean denied = false;
@@ -2523,7 +2531,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         if (shuttingDown) { return; }
         LOG.warn("Reinitializing local state");
         initialize();
-      }
+      }//while
+      
       if (denied) {
         shutdown();
       }

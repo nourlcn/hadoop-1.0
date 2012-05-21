@@ -350,6 +350,7 @@ class ReduceTask extends Task {
     this.umbilical = umbilical;
     job.setBoolean("mapred.skip.on", isSkipping());
 
+    ////TODO replace copy phase with ShuffleTask. 
     if (isMapOrReduce()) {
       copyPhase = getProgress().addPhase("copy");
       sortPhase  = getProgress().addPhase("sort");
@@ -379,6 +380,7 @@ class ReduceTask extends Task {
     // Initialize the codec
     codec = initCodec();
 
+    ////TODO need to set debug button here. local or cluster environment.
     boolean isLocal = "local".equals(job.get("mapred.job.tracker", "local"));
     if (!isLocal) {
       reduceCopier = new ReduceCopier(umbilical, job, reporter);
@@ -390,6 +392,7 @@ class ReduceTask extends Task {
             " - The reduce copier failed", reduceCopier.mergeThrowable);
       }
     }
+    
     copyPhase.complete();                         // copy is already complete
     setPhase(TaskStatus.Phase.SORT);
     statusUpdate(umbilical);
@@ -1910,6 +1913,7 @@ class ReduceTask extends Task {
     public ReduceCopier(TaskUmbilicalProtocol umbilical, JobConf conf,
                         TaskReporter reporter
                         )throws ClassNotFoundException, IOException {
+    	LOG.info("[ACT-HADOOP]!!!ReduceTask.ReduceCopier.!!!!! create new ReduceCopier.");
       
       configureClasspath(conf);
       this.reporter = reporter;
@@ -1923,6 +1927,8 @@ class ReduceTask extends Task {
       this.maxInFlight = 4 * numCopiers;
       Counters.Counter combineInputCounter = 
         reporter.getCounter(Task.Counter.COMBINE_INPUT_RECORDS);
+      ////TODO: if combiner is needed.
+      //// do not consider combiner at this moment.
       this.combinerRunner = CombinerRunner.create(conf, getTaskID(),
                                                   combineInputCounter,
                                                   reporter, null);
@@ -1931,15 +1937,20 @@ class ReduceTask extends Task {
           new CombineOutputCollector(reduceCombineOutputCounter, reporter, conf);
       }
       
+      ////io.sort.factor
       this.ioSortFactor = conf.getInt("io.sort.factor", 10);
       
+      ////abortFailureLimit
       this.abortFailureLimit = Math.max(30, numMaps / 10);
 
+      ////max failures per map before report.
       this.maxFetchFailuresBeforeReporting = conf.getInt(
           "mapreduce.reduce.shuffle.maxfetchfailures", REPORT_FAILURE_LIMIT);
 
       this.maxFailedUniqueFetches = Math.min(numMaps, 
                                              this.maxFailedUniqueFetches);
+      
+      ////when reach this value (numbers of files),merge and spill.
       this.maxInMemOutputs = conf.getInt("mapred.inmem.merge.threshold", 1000);
       this.maxInMemCopyPer =
         conf.getFloat("mapred.job.shuffle.merge.percent", 0.66f);
@@ -1980,7 +1991,8 @@ class ReduceTask extends Task {
       return numInFlight > maxInFlight;
     }
     
-    
+    ////TODO Very Important Method!!!!!!!!!
+    ////FetchOutputs from maps.!!!!!!!!!!!!
     public boolean fetchOutputs() throws IOException {
       int totalFailures = 0;
       int            numInFlight = 0, numCopied = 0;

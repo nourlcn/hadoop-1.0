@@ -432,6 +432,8 @@ class LocalJobRunner implements JobSubmissionProtocol {
   public JobStatus submitJob(JobID jobid, String jobSubmitDir, 
                              Credentials credentials) 
   throws IOException {
+	  ////
+	  LOG.info("[ACT-HADOOP]LocalJobRunner.submitJob() !!!!!!!!!!!!!!");
     Job job = new Job(jobid, jobSubmitDir);
     job.job.setCredentials(credentials);
     return job.status;

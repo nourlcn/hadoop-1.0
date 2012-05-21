@@ -3276,6 +3276,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // Assuming JobTracker is locked on entry.
   private void updateJobInProgressListeners(JobChangeEvent event) {
     for (JobInProgressListener listener : jobInProgressListeners) {
+    	
+    	////if PRIORITY_CHANGED or START_TIME_CHANGED, QUENE will be resorted.
+    	
       listener.jobUpdated(event);
     }
   }
@@ -3303,12 +3306,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * {@link TaskTracker} and responds with instructions to start/stop 
    * tasks or jobs, and also 'reset' instructions during contingencies. 
    */
+  ////TODO add method to verify ShuffleTask Info.
   public synchronized HeartbeatResponse heartbeat(TaskTrackerStatus status, 
                                                   boolean restarted,
                                                   boolean initialContact,
                                                   boolean acceptNewTasks, 
                                                   short responseId) 
     throws IOException {
+	  ////.JT assign task to TT is a PULL progress.
+	  
     if (LOG.isDebugEnabled()) {
       LOG.debug("Got heartbeat from: " + status.getTrackerName() + 
                 " (restarted: " + restarted + 
@@ -3409,6 +3415,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       }
     }
       
+    ////TODO check for ShuffleTask to be launched ?
+    
     // Check for tasks to be killed
     List<TaskTrackerAction> killTasksList = getTasksToKill(trackerName);
     if (killTasksList != null) {
@@ -3923,6 +3931,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   public JobStatus submitJob(JobID jobId, String jobSubmitDir, Credentials ts)
       throws IOException {
+	  ////
+	  LOG.info("[ACT-HADOOP] JobTracker.submitJob()!!!!!!!!!!!!!!!");
+	  
     JobInfo jobInfo = null;
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     synchronized (this) {
@@ -4195,6 +4206,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return secretManager.renewToken(token, user);
   }  
 
+  ////TaskTrackerManager.initJob()
+  //
   public void initJob(JobInProgress job) {
     if (null == job) {
       LOG.info("Init on null job is not valid");
@@ -4202,6 +4215,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
 	        
     try {
+    	////
+    	LOG.info("[ACT-HADOOP]JobTracker.initJob()");
+    	
       JobStatus prevStatus = (JobStatus)job.getStatus().clone();
       LOG.info("Initializing " + job.getJobID());
       job.initTasks();

@@ -29,7 +29,6 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
-import org.apache.hadoop.util.StringUtils;
 
 /**
  * A {@link JobInProgressListener} which initializes the tasks for a job as soon
@@ -88,6 +87,9 @@ class EagerTaskInitializationListener extends JobInProgressListener {
   private TaskTrackerManager ttm;
   
   public EagerTaskInitializationListener(Configuration conf) {
+	  ////
+	  LOG.info("[ACT-HADOOP] JobInProgressListener --> EagerTaskInitializationListener");
+	  
     numThreads = conf.getInt("mapred.jobinit.threads", DEFAULT_NUM_THREADS);
     threadPool = Executors.newFixedThreadPool(numThreads);
   }
@@ -124,6 +126,8 @@ class EagerTaskInitializationListener extends JobInProgressListener {
     synchronized (jobInitQueue) {
       jobInitQueue.add(job);
       resortInitQueue();
+      ////
+      //wakeup JobInitThread.
       jobInitQueue.notifyAll();
     }
 

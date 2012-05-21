@@ -86,7 +86,7 @@ public class JobInProgress {
     }
   }
 
-  static final Log LOG = LogFactory.getLog(JobInProgress.class);
+  static final com.sun.org.apache.commons.logging.Log LOG = LogFactory.getLog(JobInProgress.class);
     
   JobProfile profile;
   JobStatus status;
@@ -248,6 +248,7 @@ public class JobInProgress {
   private LocalFileSystem localFs;
   private FileSystem fs;
   private JobID jobId;
+  ////Speculative 投机
   volatile private boolean hasSpeculativeMaps;
   volatile private boolean hasSpeculativeReduces;
   private long inputLength = 0;
@@ -259,6 +260,7 @@ public class JobInProgress {
   
   // Per-job counters
   public static enum Counter { 
+	  ////maybe: NUM_FAILED_SHUFFLE
     NUM_FAILED_MAPS, 
     NUM_FAILED_REDUCES,
     TOTAL_LAUNCHED_MAPS,
@@ -412,6 +414,7 @@ public class JobInProgress {
           +"/"+jobId + ".xml");
       Path jobFilePath = JobSubmissionFiles.getJobConfPath(jobSubmitDir);
       jobFile = jobFilePath.toString();
+      ////copy from FS to local.
       fs.copyToLocalFile(jobFilePath, localJobFile);
       conf = new JobConf(localJobFile);
       if (conf.getUser() == null) {
@@ -443,6 +446,8 @@ public class JobInProgress {
       this.submitHostAddress = conf.getJobSubmitHostAddress();
       this.numMapTasks = conf.getNumMapTasks();
       this.numReduceTasks = conf.getNumReduceTasks();
+      
+      ////maybe to add numShuffleService
 
       this.memoryPerMap = conf.getMemoryForMapTask();
       this.memoryPerReduce = conf.getMemoryForReduceTask();
@@ -661,6 +666,9 @@ public class JobInProgress {
    */
   public synchronized void initTasks() 
   throws IOException, KillInterruptedException, UnknownHostException {
+	  ////
+	  LOG.info("[ACT-HADOOP]JobInProgress.initTasks()");
+	  
     if (tasksInited || isComplete()) {
       return;
     }
@@ -746,6 +754,16 @@ public class JobInProgress {
                                       jobtracker, conf, this, numSlotsPerReduce);
       nonRunningReduces.add(reduces[i]);
     }
+    
+    ////test: could get reduce task on which node or not.
+    if (this.reduces.length > 0){
+//    	Only map task has getSplitLocations
+//    	LOG.info("[ACT-HADOOP]after init, one reduce.getSplitLocations() is :" + this.reduces[0].getSplitLocations());
+    	LOG.info("[ACT-HADOOP]after init, reduce.getSplitNodes(), input Split Node is " + this.reduces[0].getSplitNodes());
+    }////
+    else{
+    	LOG.info("[ACT-HADOOP]could not fetch reduce node/location info.");
+    }
 
     // Calculate the minimum number of maps to be complete before 
     // we should start scheduling reduces
@@ -755,6 +773,7 @@ public class JobInProgress {
                          DEFAULT_COMPLETED_MAPS_PERCENT_FOR_REDUCE_SLOWSTART) * 
            numMapTasks));
     
+    ////set numMaps, after numMaps mapper finished, reduce start.
     // ... use the same for estimating the total output of all maps
     resourceEstimator.setThreshhold(completedMapsForReduceSlowstart);
     
@@ -764,11 +783,13 @@ public class JobInProgress {
     // cleanup map tip. This map doesn't use any splits. Just assign an empty
     // split.
     TaskSplitMetaInfo emptySplit = JobSplit.EMPTY_TASK_SPLIT;
+    ////This is a MAP TIP
     cleanup[0] = new TaskInProgress(jobId, jobFile, emptySplit, 
             jobtracker, conf, this, numMapTasks, 1);
     cleanup[0].setJobCleanupTask();
 
     // cleanup reduce tip.
+    ////This is a Reduce TIP
     cleanup[1] = new TaskInProgress(jobId, jobFile, numMapTasks,
                        numReduceTasks, jobtracker, conf, this, 1);
     cleanup[1].setJobCleanupTask();

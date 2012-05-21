@@ -147,6 +147,9 @@ class TaskInProgress {
     this.numSlotsRequired = numSlotsRequired;
     setMaxTaskAttempts();
     init(jobid);
+    
+    ////
+    System.out.print("[ACT-HADOOP] in TaskInProgress");
   }
         
   /**

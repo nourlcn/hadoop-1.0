@@ -27,6 +27,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
+////defalut hadoop scheduler.
+
 /**
  * A {@link TaskScheduler} that keeps jobs in a queue in priority order (FIFO
  * by default).
@@ -77,6 +79,7 @@ class JobQueueTaskScheduler extends TaskScheduler {
       new EagerTaskInitializationListener(conf);
   }
 
+  ////default assign map/reduce task to node.
   @Override
   public synchronized List<Task> assignTasks(TaskTracker taskTracker)
       throws IOException {
@@ -88,6 +91,8 @@ class JobQueueTaskScheduler extends TaskScheduler {
 
     Collection<JobInProgress> jobQueue =
       jobQueueJobInProgressListener.getJobQueue();
+    ////
+    System.out.print("[ACT-HADOOP]Default jobQueue is " + jobQueueJobInProgressListener.getJobQueue());
 
     //
     // Get map + reduce counts for the current tracker.
@@ -107,8 +112,10 @@ class JobQueueTaskScheduler extends TaskScheduler {
     int remainingMapLoad = 0;
     synchronized (jobQueue) {
       for (JobInProgress job : jobQueue) {
+    	  ////calculate all map/reduce tasks of running jobs.
         if (job.getStatus().getRunState() == JobStatus.RUNNING) {
           remainingMapLoad += (job.desiredMaps() - job.finishedMaps());
+          ////check reduce is started or not.
           if (job.scheduleReduces()) {
             remainingReduceLoad += 
               (job.desiredReduces() - job.finishedReduces());
@@ -258,6 +265,8 @@ class JobQueueTaskScheduler extends TaskScheduler {
     return assignedTasks;
   }
 
+  ////TODO  need read.
+  
   private boolean exceededPadding(boolean isMapTask, 
                                   ClusterStatus clusterStatus, 
                                   int maxTaskTrackerSlots) { 
