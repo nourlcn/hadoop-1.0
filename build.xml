@@ -429,6 +429,8 @@
       <mapper type="glob" from="*.template" to="*"/>
     </copy>
 
+  	<!--
+   ////by leejinguis
     <exec executable="sh">
        <arg line="src/saveVersion.sh ${version} ${build.dir}"/>
     </exec>
@@ -436,6 +438,7 @@
    <exec executable="sh">
        <arg line="src/fixFontsPath.sh ${src.docs.cn}"/>
    </exec>
+   -->
   </target>
 
   <import file="${test.src.dir}/aop/build/aop.xml"/>
@@ -1494,7 +1497,10 @@
   <!-- ================================================================== -->
   <!--                                                                    -->
   <!-- ================================================================== -->
-  <target name="package" depends="compile, jar, javadoc, docs, cn-docs, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
+	
+	<!--remove javadoc, docs, cn-docs,-->
+	
+  <target name="package" depends="compile, jar, api-report, examples, tools-jar, jar-test, ant-tasks, package-librecordio"
 	  description="assembles multi-platform artifacts for distribution">
     <delete dir="${dist.dir}"/>
     <mkdir dir="${dist.dir}"/>
@@ -2776,11 +2782,14 @@
     <!-- delete main in case HADOOP_CONF_DIR is different -->
     <delete file="${build.c++.task-controller}/impl/main.o"
             quiet="true" failonerror="false"/>
+    <!--
+	 ////by leejingui
     <exec executable="make"
           dir="${build.c++.task-controller}"
           searchpath="yes" failonerror="yes">
       <arg value="install"/>
     </exec>
+    -->
   </target>
 
   <target name="test-task-controller" depends="init,task-controller">
