@@ -3409,6 +3409,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             if(LOG.isDebugEnabled()) {
               LOG.debug(trackerName + " -> LaunchTask: " + task.getTaskID());
             }
+            ////after scheduler assigned tasks in List. TT and JT communicate with heartbeat.
+            ////When JT notify that List is not null, addd LaunchTaskAction with assigned Task 
             actions.add(new LaunchTaskAction(task));
           }
         }

@@ -1667,6 +1667,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
               synchronized (runningJobs) {
                 rjob = runningJobs.get(job);          
                 if (rjob != null) {
+                	////this job is running, in the running job list.
                   synchronized (rjob) {
                     FetchStatus f = rjob.getFetchStatus();
                     if (f != null) {
@@ -1708,6 +1709,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
             if (action instanceof LaunchTaskAction) {
               addToTaskQueue((LaunchTaskAction)action);
             } else if (action instanceof CommitTaskAction) {
+              ////TODO  commit Action do what ?
               CommitTaskAction commitAction = (CommitTaskAction)action;
               if (!commitResponses.contains(commitAction.getTaskID())) {
                 LOG.info("Received commit task action for " + 
@@ -2275,6 +2277,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   }
 
   private void addToTaskQueue(LaunchTaskAction action) {
+    ////TODO act.getTask().isShuffleTask() ?
     if (action.getTask().isMapTask()) {
       mapLauncher.addToTaskQueue(action);
     } else {
@@ -2429,6 +2432,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    * task tracker.
    * @throws InterruptedException 
    */
+  ////TODO if it is ShuffleTask ?
   void startNewTask(final TaskInProgress tip) throws InterruptedException {
     Thread launchThread = new Thread(new Runnable() {
       @Override

@@ -664,11 +664,12 @@ public class JobInProgress {
    * Construct the splits, etc.  This is invoked from an async
    * thread so that split-computation doesn't block anyone.
    */
+  ////TODO need to create ShuffleTask.
   public synchronized void initTasks() 
   throws IOException, KillInterruptedException, UnknownHostException {
-	  ////
-	  LOG.info("[ACT-HADOOP]JobInProgress.initTasks()");
-	  
+    // //
+    LOG.info("[ACT-HADOOP]JobInProgress.initTasks()");
+
     if (tasksInited || isComplete()) {
       return;
     }

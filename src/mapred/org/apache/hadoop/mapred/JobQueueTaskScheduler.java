@@ -116,8 +116,10 @@ class JobQueueTaskScheduler extends TaskScheduler {
       for (JobInProgress job : jobQueue) {
     	  ////calculate all map/reduce tasks of running jobs.
         if (job.getStatus().getRunState() == JobStatus.RUNNING) {
+        	////need how many maps to run.
           remainingMapLoad += (job.desiredMaps() - job.finishedMaps());
           ////check reduce is started or not.
+          //// if reduce is started and num of running+finished reduce < desireReduces.
           if (job.scheduleReduces()) {
             remainingReduceLoad += 
               (job.desiredReduces() - job.finishedReduces());
@@ -153,18 +155,21 @@ class JobQueueTaskScheduler extends TaskScheduler {
     // with the highest priority.
     //
     
+    ////use LoadFactor to keep cluster balancer.
     final int trackerCurrentMapCapacity = 
       Math.min((int)Math.ceil(mapLoadFactor * trackerMapCapacity), 
                               trackerMapCapacity);
     int availableMapSlots = trackerCurrentMapCapacity - trackerRunningMaps;
     boolean exceededMapPadding = false;
     if (availableMapSlots > 0) {
-      exceededMapPadding = 
+    ////TODO don't know that to do with this code.
+    	exceededMapPadding = 
         exceededPadding(true, clusterStatus, trackerMapCapacity);
     }
     
     int numLocalMaps = 0;
     int numNonLocalMaps = 0;
+    ////scheduleMap Progress.
     scheduleMaps:
     for (int i=0; i < availableMapSlots; ++i) {
       synchronized (jobQueue) {
@@ -211,6 +216,7 @@ class JobQueueTaskScheduler extends TaskScheduler {
         }
       }
     }
+    ////list to keep assigned maps.
     int assignedMaps = assignedTasks.size();
 
     //
