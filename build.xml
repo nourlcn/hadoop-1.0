@@ -454,7 +454,7 @@
   </target>
   
   <target name="compile-rcc-compiler" depends="init, record-parser">
-    <javac 
+    <javac includeantruntime="false" 
         encoding="${build.encoding}" 
         srcdir="${core.src.dir}"
         includes="org/apache/hadoop/record/compiler/**/*.java"
@@ -478,7 +478,7 @@
         <classpath refid="test.classpath"/>
      </taskdef>
     <!-- Compile Java files (excluding JSPs) checking warnings -->
-    <javac 
+    <javac includeantruntime="false" 
      encoding="${build.encoding}" 
      srcdir="${core.src.dir}"	
      includes="org/apache/hadoop/**/*.java"
@@ -531,7 +531,7 @@
     </jsp-compile>
 
     <!-- Compile Java files (excluding JSPs) checking warnings -->
-    <javac 
+    <javac includeantruntime="false" 
      encoding="${build.encoding}" 
      srcdir="${mapred.src.dir};${build.src}" 
      includes="org/apache/hadoop/**/*.java"
@@ -567,7 +567,7 @@
     </jsp-compile>
 
     <!-- Compile Java files (excluding JSPs) checking warnings -->
-    <javac 
+    <javac includeantruntime="false" 
      encoding="${build.encoding}" 
      srcdir="${hdfs.src.dir};${build.src}" 
      includes="org/apache/hadoop/**/*.java"

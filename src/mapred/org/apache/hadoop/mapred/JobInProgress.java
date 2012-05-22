@@ -86,7 +86,7 @@ public class JobInProgress {
     }
   }
 
-  static final com.sun.org.apache.commons.logging.Log LOG = LogFactory.getLog(JobInProgress.class);
+  static final org.apache.commons.logging.Log LOG = LogFactory.getLog(JobInProgress.class);
     
   JobProfile profile;
   JobStatus status;
