@@ -383,6 +383,7 @@ class ReduceTask extends Task {
     ////TODO need to set debug button here. local or cluster environment.
     boolean isLocal = "local".equals(job.get("mapred.job.tracker", "local"));
     if (!isLocal) {
+      LOG.info("[ACT-HADOOP]!!!!! verify isLocal or not, wether via Copy Phase");
       reduceCopier = new ReduceCopier(umbilical, job, reporter);
       if (!reduceCopier.fetchOutputs()) {
         if(reduceCopier.mergeThrowable instanceof FSError) {
