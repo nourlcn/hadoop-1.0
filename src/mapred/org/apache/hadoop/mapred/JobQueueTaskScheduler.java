@@ -54,6 +54,8 @@ class JobQueueTaskScheduler extends TaskScheduler {
     eagerTaskInitializationListener.start();
     taskTrackerManager.addJobInProgressListener(
         eagerTaskInitializationListener);
+    ////
+    System.out.print("[ACT-HADOOP] JobQueueTaskScheduler.start(),Using FIFO policy.");
   }
   
   @Override
