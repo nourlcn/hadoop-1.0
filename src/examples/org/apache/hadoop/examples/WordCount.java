@@ -53,6 +53,7 @@ public class WordCount {
     ////set local mode
     conf.set("mapred.job.tracker", "local");
     conf.set("mapred.reduce.slowstart.completed.maps","1.0");
+    
     String[] otherArgs = new GenericOptionsParser(conf, args).getRemainingArgs();
     if (otherArgs.length != 2) {
       System.err.println("Usage: wordcount <in> <out>");
