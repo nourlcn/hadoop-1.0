@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<allocations>
+
+	<pool name="test">
+		<minMaps>4</minMaps>
+		<minReduces>2</minReduces>
+	</pool>
+	<pool name="hadoop">
+                <minMaps>10</minMaps>
+                <minReduces>5</minReduces>
+	</pool>
+	<pool name="hive">
+                <minMaps>2</minMaps>
+                <minReduces>1</minReduces>
+	</pool>
+
+	<user name="actuser">
+		<maxRunningJobs>10</maxRunningJobs>
+	</user>
+        <user name="vdaas">
+                <maxRunningJobs>2</maxRunningJobs>
+        </user>
+
+	<userMaxJobsDefault>1</userMaxJobsDefault>
+
+</allocations>
