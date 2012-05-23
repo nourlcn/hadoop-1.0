@@ -93,8 +93,6 @@ class JobQueueTaskScheduler extends TaskScheduler {
 
     Collection<JobInProgress> jobQueue =
       jobQueueJobInProgressListener.getJobQueue();
-    ////
-    System.out.print("[ACT-HADOOP]Default jobQueue is " + jobQueueJobInProgressListener.getJobQueue());
 
     //
     // Get map + reduce counts for the current tracker.
