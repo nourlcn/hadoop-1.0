@@ -1039,7 +1039,7 @@ class ReduceTask extends Task {
       
       final Path file;
       final Configuration conf;
-      
+      ////if in-memory, data is not null.
       byte[] data;
       final boolean inMemory;
       long compressedSize;
@@ -1050,6 +1050,7 @@ class ReduceTask extends Task {
         this.mapAttemptId = mapAttemptId;
         
         this.conf = conf;
+        ////if on disk, file is not null.
         this.file = file;
         this.compressedSize = size;
         
@@ -1231,6 +1232,7 @@ class ReduceTask extends Task {
       }
     }
 
+    ////TODO write MapOutputDistributor?
     /** Copies map outputs as they become available */
     private class MapOutputCopier extends Thread {
       // basic/unit connection timeout (in milliseconds)
@@ -1262,7 +1264,7 @@ class ReduceTask extends Task {
           job.getInt("mapreduce.reduce.shuffle.connect.timeout", STALLED_COPY_TIMEOUT);
         shuffleReadTimeout =
           job.getInt("mapreduce.reduce.shuffle.read.timeout", DEFAULT_READ_TIMEOUT);
-        
+        ////are outputs compressed?
         if (job.getCompressMapOutput()) {
           Class<? extends CompressionCodec> codecClass =
             job.getMapOutputCompressorClass(DefaultCodec.class);
@@ -1306,6 +1308,7 @@ class ReduceTask extends Task {
         }
       }
       
+      ////thread for fetching map output.
       /** Loop forever and fetch map outputs as they become available.
        * The thread exits when it is interrupted by {@link ReduceTaskRunner}
        */
@@ -1317,16 +1320,19 @@ class ReduceTask extends Task {
             long size = -1;
             
             synchronized (scheduledCopies) {
+              ////list of map output currently being copied.
               while (scheduledCopies.isEmpty()) {
                 scheduledCopies.wait();
               }
               loc = scheduledCopies.remove(0);
             }
+            ////get map output location
             CopyOutputErrorType error = CopyOutputErrorType.OTHER_ERROR;
             readError = false;
             try {
               shuffleClientMetrics.threadBusy();
               start(loc);
+              ////size: bytes of in-mem or ondisk data we have copied from map to reduce.
               size = copyOutput(loc);
               shuffleClientMetrics.successFetch();
               error = CopyOutputErrorType.NO_ERROR;
@@ -1397,6 +1403,8 @@ class ReduceTask extends Task {
         // Copy the map output
         MapOutput mapOutput = getMapOutput(loc, tmpMapOutput,
                                            reduceId.getTaskID().getId());
+        ////Now ,input is in Mem or local tmp file.
+        
         if (mapOutput == null) {
           throw new IOException("Failed to fetch map-output for " + 
                                 loc.getTaskAttemptId() + " from " + 
@@ -1483,7 +1491,7 @@ class ReduceTask extends Task {
         // Connect
         URL url = mapOutputLoc.getOutputLocation();
         URLConnection connection = url.openConnection();
-        
+        LOG.info("[ACT-HADOOP]Important!! URL like: " + url.toString());
         InputStream input = setupSecureConnection(mapOutputLoc, connection);
  
         // Validate header from map output
@@ -1657,6 +1665,7 @@ class ReduceTask extends Task {
         boolean createdNow = ramManager.reserve(mapOutputLength, input);
       
         // Reconnect if we need to
+        ////after wait, input is closed. need reconnect.
         if (!createdNow) {
           // Reconnect
           try {
@@ -1682,6 +1691,7 @@ class ReduceTask extends Task {
         // Are map-outputs compressed?
         if (codec != null) {
           decompressor.reset();
+          ////decompress
           input = codec.createInputStream(input, decompressor);
         }
       
@@ -1809,6 +1819,7 @@ class ReduceTask extends Task {
           while (n > 0) {
             bytesRead += n;
             shuffleClientMetrics.inputBytes(n);
+            ////write into local file.
             output.write(buf, 0, n);
 
             // indicate we're making progress
@@ -1995,7 +2006,7 @@ class ReduceTask extends Task {
     ////TODO Very Important Method!!!!!!!!!
     ////FetchOutputs from maps.!!!!!!!!!!!!
     public boolean fetchOutputs() throws IOException {
-      int totalFailures = 0;
+      int totalFailures = 0; 
       int            numInFlight = 0, numCopied = 0;
       DecimalFormat  mbpsFormat = new DecimalFormat("0.00");
       final Progress copyPhase = 
@@ -2008,15 +2019,20 @@ class ReduceTask extends Task {
         copyPhase.addPhase();       // add sub-phase per file
       }
       
+      ////mapred.reduce.parallel.copies
       copiers = new ArrayList<MapOutputCopier>(numCopiers);
       
       // start all the copying threads
       for (int i=0; i < numCopiers; i++) {
         MapOutputCopier copier = new MapOutputCopier(conf, reporter, 
             reduceTask.getJobTokenSecret());
+        ////threads for fetching map output.
         copiers.add(copier);
+        ////copy data from map to reduce. in-mem or on disk.
         copier.start();
       }
+      
+      ////TODO !!!do not care about merge!!!
       
       //start the on-disk-merge thread
       localFSMergerThread = new LocalFSMerger((LocalFileSystem)localFileSys);
