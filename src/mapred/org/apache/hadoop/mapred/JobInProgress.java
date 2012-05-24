@@ -728,6 +728,11 @@ public class JobInProgress {
       NetUtils.verifyHostnames(split.getLocations());
     }
     
+    ////for debug
+    for (TaskSplitMetaInfo split : splits) {
+      LOG.error("[ACT-HADOOP]split.getLocations() is " + split.getLocations());
+    }
+    
     jobtracker.getInstrumentation().addWaitingMaps(getJobID(), numMapTasks);
     jobtracker.getInstrumentation().addWaitingReduces(getJobID(), numReduceTasks);
 ////    
