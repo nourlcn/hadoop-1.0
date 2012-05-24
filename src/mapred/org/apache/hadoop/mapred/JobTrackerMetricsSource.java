@@ -62,6 +62,10 @@ class JobTrackerMetricsSource extends JobTrackerInstrumentation
       registry.newGauge("waiting_maps", "", 0);
   final MetricMutableGaugeInt waitingReds =
       registry.newGauge("waiting_reduces", "", 0);
+  ////
+  final MetricMutableGaugeInt waitingShuffles =
+      registry.newGauge("waiting_shuffles", "", 0);
+  
   final MetricMutableGaugeInt reservedMapSlots =
       registry.newGauge("reserved_map_slots", "", 0);
   final MetricMutableGaugeInt reservedRedSlots =
@@ -172,6 +176,14 @@ class JobTrackerMetricsSource extends JobTrackerInstrumentation
   @Override
   public void decWaitingReduces(JobID id, int task){
     waitingReds.decr(task);
+  }
+  
+  public void addWaitingShuffles(JobID id, int task) {
+    waitingShuffles.incr(task);
+  }
+
+  public void decWaitingShuffles(JobID id, int task){
+    waitingShuffles.decr(task);
   }
 
   @Override

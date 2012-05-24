@@ -3264,6 +3264,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return uniqueHostsMap.size();
   }
   
+  //TODO function.
+  //TODO add this content into interface TaskTrackerManager
+  public int getNumberOfUniqueReduceHosts(){
+    return -1;
+  }
+  
   public void addJobInProgressListener(JobInProgressListener listener) {
     jobInProgressListeners.add(listener);
   }

@@ -55,6 +55,7 @@ abstract class TaskScheduler implements Configurable {
 
   public synchronized void setTaskTrackerManager(
       TaskTrackerManager taskTrackerManager) {
+    ////indeed, taskTrackerManager is JobTracker
     this.taskTrackerManager = taskTrackerManager;
   }
   

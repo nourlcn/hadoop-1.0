@@ -95,14 +95,23 @@ public class JobInProgress {
   final QueueMetrics queueMetrics;
 
   TaskInProgress maps[] = new TaskInProgress[0];
+  ////
+  TaskInProgress shuffles[] = new TaskInProgress[0];
+  
   TaskInProgress reduces[] = new TaskInProgress[0];
   TaskInProgress cleanup[] = new TaskInProgress[0];
   TaskInProgress setup[] = new TaskInProgress[0];
   int numMapTasks = 0;
   int numReduceTasks = 0;
+  //TODO Shuffle as service and numShuffleTasks is less than numReduceTasks.
+  //Currently,numShuffleTasks is same as numReduceTasks. Just Split Reduce into two parts.
+  int numShuffleTasks = 0;
+  
   final long memoryPerMap;
   final long memoryPerReduce;
   volatile int numSlotsPerMap = 1;
+  ////
+  volatile int numSlotsPerShuffle = 1;
   volatile int numSlotsPerReduce = 1;
   final int maxTaskFailuresPerTracker;
   
@@ -154,6 +163,10 @@ public class JobInProgress {
 
   // A list of non-running reduce TIPs
   Set<TaskInProgress> nonRunningReduces;
+
+  //A list of non-running reduce TIPs
+  Set<TaskInProgress> nonRunningShuffles;
+ 
 
   // A set of running reduce TIPs
   Set<TaskInProgress> runningReduces;
@@ -326,6 +339,8 @@ public class JobInProgress {
     this.jobId = jobid;
     this.numMapTasks = conf.getNumMapTasks();
     this.numReduceTasks = conf.getNumReduceTasks();
+    //TODO not equal to numReduceTasks.
+    this.numShuffleTasks = this.numReduceTasks;
     this.maxLevel = NetworkTopology.DEFAULT_HOST_LEVEL;
     this.anyCacheLevel = this.maxLevel+1;
     this.jobtracker = tracker;
@@ -443,6 +458,8 @@ public class JobInProgress {
       this.submitHostAddress = conf.getJobSubmitHostAddress();
       this.numMapTasks = conf.getNumMapTasks();
       this.numReduceTasks = conf.getNumReduceTasks();
+      //TODO
+      this.numShuffleTasks = this.numReduceTasks;
 
       this.memoryPerMap = conf.getMemoryForMapTask();
       this.memoryPerReduce = conf.getMemoryForReduceTask();
@@ -713,8 +730,13 @@ public class JobInProgress {
     
     jobtracker.getInstrumentation().addWaitingMaps(getJobID(), numMapTasks);
     jobtracker.getInstrumentation().addWaitingReduces(getJobID(), numReduceTasks);
+////    
+    jobtracker.getInstrumentation().addWaitingShuffles(getJobID(), numShuffleTasks);
+    
     this.queueMetrics.addWaitingMaps(getJobID(), numMapTasks);
     this.queueMetrics.addWaitingReduces(getJobID(), numReduceTasks);
+////
+    this.queueMetrics.addWaitingShuffles(getJobID(), numShuffleTasks);
 
     maps = new TaskInProgress[numMapTasks];
     for(int i=0; i < numMapTasks; ++i) {
@@ -735,7 +757,20 @@ public class JobInProgress {
 
     // set the launch time
     this.launchTime = jobtracker.getClock().getTime();
+    
 
+    //// Create Shuffle Tasks.
+    this.shuffles = new TaskInProgress[numShuffleTasks];
+    for (int i = 0; i < numShuffleTasks; i++) {
+      shuffles[i] = new TaskInProgress(jobId, jobFile, 
+                                      numMapTasks, i, 
+                                      jobtracker, conf, this, numSlotsPerShuffle);
+      nonRunningShuffles.add(reduces[i]);
+    }
+    
+    LOG.info("[ACT-HADOOP]Create Shuffle Task Success!");
+    
+    
     //
     // Create reduce tasks
     //
@@ -749,6 +784,7 @@ public class JobInProgress {
 
     // Calculate the minimum number of maps to be complete before 
     // we should start scheduling reduces
+    //TODO  stage2: slowStartForShuffle.
     completedMapsForReduceSlowstart = 
       (int)Math.ceil(
           (conf.getFloat("mapred.reduce.slowstart.completed.maps", 
@@ -2494,6 +2530,20 @@ public class JobInProgress {
     return -1;
   }
   
+  /**
+   * Find new Shuffle task
+   * 
+   * @param tts The task tracker that is asking for a task
+   * @param clusterSize The number of task trackers in the cluster
+   * @param numUniqueHosts The number of hosts that run task trackers
+   * @param avgProgress The average progress of this kind of task in this job
+   * @return the index in tasks of the selected task (or -1 for no task)
+   */
+  private synchronized int findNewShuffleTask(TaskTrackerStatus tts,int clusterSize, int numUniqueHosts, double avgProgress){
+    //TODO add function
+    return -1;
+  }
+
   private boolean shouldRunOnTaskTracker(String taskTracker) {
     //
     // Check if too many tasks of this job have failed on this

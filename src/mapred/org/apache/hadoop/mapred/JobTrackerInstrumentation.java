@@ -186,4 +186,8 @@ class JobTrackerInstrumentation {
                        new JobTrackerMetricsSource(jt, conf));
   }
 
+  ////
+  public void addWaitingShuffles(JobID jobID, int numShuffleTasks) 
+  {}
+
 }

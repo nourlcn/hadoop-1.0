@@ -38,6 +38,13 @@ interface TaskTrackerManager {
    */
   public int getNumberOfUniqueHosts();
   
+//  
+//  /**
+//   *@author nourl
+//   *@return The number of unique hosts running reduce task, used for shuffle service. 
+//   */
+//  public int getNumberOfUniqueReduceHosts();
+  
   /**
    * @return a summary of the cluster's status.
    */

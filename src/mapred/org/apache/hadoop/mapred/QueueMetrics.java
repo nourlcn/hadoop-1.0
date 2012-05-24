@@ -67,6 +67,10 @@ class QueueMetrics implements MetricsSource {
       registry.newGauge("waiting_maps", "", 0);
   final MetricMutableGaugeInt waitingReds =
       registry.newGauge("waiting_reduces", "", 0);
+  ////
+  final MetricMutableGaugeInt waitingShuffles =
+      registry.newGauge("waiting_shuffles", "", 0);
+  
   final MetricMutableGaugeInt reservedMapSlots =
       registry.newGauge("reserved_map_slots", "", 0);
   final MetricMutableGaugeInt reservedRedSlots =
@@ -246,6 +250,11 @@ class QueueMetrics implements MetricsSource {
                                      MetricsSystem ms) {
     return ms.register("QueueMetrics,q=" + queueName, "Queue metrics",
                        new QueueMetrics(queueName, conf));
+  }
+
+  ////
+  public void addWaitingShuffles(JobID jobID, int task) {
+    waitingShuffles.incr(task);
   }
 
 }
