@@ -494,6 +494,17 @@ abstract public class Task implements Writable, Configurable {
   
   public abstract boolean isMapTask();
 
+  /*
+   * task is shuffle task if isMapTask is false and isShuffleTask is true.
+   */
+  public boolean isShuffleTask() {
+    /*
+     * in order to keep working with origin hadoop,return false if not set this
+     * value by hand.
+     */
+    return false;
+  };
+
   public Progress getProgress() { return taskProgress; }
 
   public void initialize(JobConf job, JobID id, 
