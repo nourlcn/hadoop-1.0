@@ -27,6 +27,8 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
 
+////defalut hadoop scheduler.
+
 /**
  * A {@link TaskScheduler} that keeps jobs in a queue in priority order (FIFO
  * by default).
@@ -52,6 +54,8 @@ class JobQueueTaskScheduler extends TaskScheduler {
     eagerTaskInitializationListener.start();
     taskTrackerManager.addJobInProgressListener(
         eagerTaskInitializationListener);
+    ////
+    System.out.print("[ACT-HADOOP] JobQueueTaskScheduler.start(),Using FIFO policy.");
   }
   
   @Override
@@ -77,6 +81,7 @@ class JobQueueTaskScheduler extends TaskScheduler {
       new EagerTaskInitializationListener(conf);
   }
 
+  ////default assign map/reduce task to node.
   @Override
   public synchronized List<Task> assignTasks(TaskTracker taskTracker)
       throws IOException {
@@ -107,8 +112,12 @@ class JobQueueTaskScheduler extends TaskScheduler {
     int remainingMapLoad = 0;
     synchronized (jobQueue) {
       for (JobInProgress job : jobQueue) {
+    	  ////calculate all map/reduce tasks of running jobs.
         if (job.getStatus().getRunState() == JobStatus.RUNNING) {
+        	////need how many maps to run.
           remainingMapLoad += (job.desiredMaps() - job.finishedMaps());
+          ////check reduce is started or not.
+          //// if reduce is started and num of running+finished reduce < desireReduces.
           if (job.scheduleReduces()) {
             remainingReduceLoad += 
               (job.desiredReduces() - job.finishedReduces());
@@ -144,18 +153,21 @@ class JobQueueTaskScheduler extends TaskScheduler {
     // with the highest priority.
     //
     
+    ////use LoadFactor to keep cluster balancer.
     final int trackerCurrentMapCapacity = 
       Math.min((int)Math.ceil(mapLoadFactor * trackerMapCapacity), 
                               trackerMapCapacity);
     int availableMapSlots = trackerCurrentMapCapacity - trackerRunningMaps;
     boolean exceededMapPadding = false;
     if (availableMapSlots > 0) {
-      exceededMapPadding = 
+    ////TODO don't know that to do with this code.
+    	exceededMapPadding = 
         exceededPadding(true, clusterStatus, trackerMapCapacity);
     }
     
     int numLocalMaps = 0;
     int numNonLocalMaps = 0;
+    ////scheduleMap Progress.
     scheduleMaps:
     for (int i=0; i < availableMapSlots; ++i) {
       synchronized (jobQueue) {
@@ -202,6 +214,7 @@ class JobQueueTaskScheduler extends TaskScheduler {
         }
       }
     }
+    ////list to keep assigned maps.
     int assignedMaps = assignedTasks.size();
 
     //
@@ -263,6 +276,8 @@ class JobQueueTaskScheduler extends TaskScheduler {
     return assignedTasks;
   }
 
+  ////TODO  need read.
+  
   private boolean exceededPadding(boolean isMapTask, 
                                   ClusterStatus clusterStatus, 
                                   int maxTaskTrackerSlots) { 

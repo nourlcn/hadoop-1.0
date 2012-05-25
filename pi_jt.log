@@ -1,0 +1,40 @@
+12/05/23 13:53:58 INFO mapred.JobTracker: Adding tracker tracker_coffee:localhost/127.0.0.1:55149 to host coffee
+12/05/23 13:54:46 INFO mapred.JobTracker: [ACT-HADOOP] JobTracker.submitJob()!!!!!!!!!!!!!!!
+12/05/23 13:54:46 INFO mapred.JobInProgress: job_201205231353_0001: nMaps=2 nReduces=1 max=-1
+12/05/23 13:54:46 INFO mapred.JobTracker: [ACT-HADOOP]JobTracker.initJob()
+12/05/23 13:54:46 INFO mapred.JobTracker: Initializing job_201205231353_0001
+12/05/23 13:54:46 INFO mapred.JobInProgress: [ACT-HADOOP]JobInProgress.initTasks()
+12/05/23 13:54:46 INFO mapred.JobInProgress: Initializing job_201205231353_0001
+12/05/23 13:54:46 INFO mapred.JobTracker: Job job_201205231353_0001 added successfully for user 'nourl' to queue 'default'
+12/05/23 13:54:46 INFO mapred.AuditLogger: USER=nourl	IP=192.168.3.237	OPERATION=SUBMIT_JOB	TARGET=job_201205231353_0001	RESULT=SUCCESS
+12/05/23 13:54:46 INFO mapred.JobInProgress: jobToken generated and stored with users keys in /tmp/hadoop-nourl/mapred/system/job_201205231353_0001/jobToken
+12/05/23 13:54:46 INFO mapred.JobInProgress: Input size for job job_201205231353_0001 = 236. Number of splits = 2
+12/05/23 13:54:46 INFO mapred.JobInProgress: tip:task_201205231353_0001_m_000000 has split on node:/default-rack/coffee
+12/05/23 13:54:46 INFO mapred.JobInProgress: tip:task_201205231353_0001_m_000001 has split on node:/default-rack/coffee
+12/05/23 13:54:46 INFO mapred.JobInProgress: job_201205231353_0001 LOCALITY_WAIT_FACTOR=1.0
+12/05/23 13:54:46 INFO mapred.JobInProgress: [ACT-HADOOP]after init, reduce.getSplitNodes(), input Split Node is 
+12/05/23 13:54:46 INFO mapred.JobInProgress: Job job_201205231353_0001 initialized successfully with 2 map tasks and 1 reduce tasks.
+12/05/23 13:54:46 INFO mapred.JobTracker: Adding task (JOB_SETUP) 'attempt_201205231353_0001_m_000003_0' to tip task_201205231353_0001_m_000003, for tracker 'tracker_coffee:localhost/127.0.0.1:55149'
+12/05/23 13:54:52 INFO mapred.JobInProgress: Task 'attempt_201205231353_0001_m_000003_0' has completed task_201205231353_0001_m_000003 successfully.
+12/05/23 13:54:55 INFO mapred.JobTracker: Adding task (MAP) 'attempt_201205231353_0001_m_000000_0' to tip task_201205231353_0001_m_000000, for tracker 'tracker_coffee:localhost/127.0.0.1:55149'
+12/05/23 13:54:55 INFO mapred.JobInProgress: Choosing data-local task task_201205231353_0001_m_000000
+12/05/23 13:54:55 INFO mapred.JobTracker: Adding task (MAP) 'attempt_201205231353_0001_m_000001_0' to tip task_201205231353_0001_m_000001, for tracker 'tracker_coffee:localhost/127.0.0.1:55149'
+12/05/23 13:54:55 INFO mapred.JobInProgress: Choosing data-local task task_201205231353_0001_m_000001
+12/05/23 13:55:08 INFO mapred.JobInProgress: Task 'attempt_201205231353_0001_m_000000_0' has completed task_201205231353_0001_m_000000 successfully.
+12/05/23 13:55:08 INFO mapred.JobInProgress: Task 'attempt_201205231353_0001_m_000001_0' has completed task_201205231353_0001_m_000001 successfully.
+12/05/23 13:55:11 INFO mapred.JobTracker: Adding task (REDUCE) 'attempt_201205231353_0001_r_000000_0' to tip task_201205231353_0001_r_000000, for tracker 'tracker_coffee:localhost/127.0.0.1:55149'
+12/05/23 13:55:26 INFO mapred.JobInProgress: Task 'attempt_201205231353_0001_r_000000_0' has completed task_201205231353_0001_r_000000 successfully.
+12/05/23 13:55:26 INFO mapred.JobTracker: Adding task (JOB_CLEANUP) 'attempt_201205231353_0001_m_000002_0' to tip task_201205231353_0001_m_000002, for tracker 'tracker_coffee:localhost/127.0.0.1:55149'
+12/05/23 13:55:32 INFO mapred.JobInProgress: Task 'attempt_201205231353_0001_m_000002_0' has completed task_201205231353_0001_m_000002 successfully.
+12/05/23 13:55:32 INFO mapred.JobInProgress: Job job_201205231353_0001 has completed successfully.
+12/05/23 13:55:32 INFO mapred.JobInProgress$JobSummary: jobId=job_201205231353_0001,submitTime=1337752486072,launchTime=1337752486406,firstMapTaskLaunchTime=1337752495466,firstReduceTaskLaunchTime=1337752511692,firstJobSetupTaskLaunchTime=1337752486408,firstJobCleanupTaskLaunchTime=1337752526748,finishTime=1337752532756,numMaps=2,numSlotsPerMap=1,numReduces=1,numSlotsPerReduce=1,user=nourl,queue=default,status=SUCCEEDED,mapSlotSeconds=29,reduceSlotsSeconds=13,clusterMapCapacity=2,clusterReduceCapacity=2,jobName=PiEstimator
+12/05/23 13:55:32 INFO mapred.JobHistory: Creating DONE subfolder at file:/home/nourl/github/hadoop-common-1.0/build/hadoop-1.0.4-SNAPSHOT/logs/history/done/version-1/coffee_1337752392847_/2012/05/23/000000
+12/05/23 13:55:32 INFO mapred.JobHistory: Moving file:/home/nourl/github/hadoop-common-1.0/build/hadoop-1.0.4-SNAPSHOT/logs/history/job_201205231353_0001_1337752486072_nourl_PiEstimator to file:/home/nourl/github/hadoop-common-1.0/build/hadoop-1.0.4-SNAPSHOT/logs/history/done/version-1/coffee_1337752392847_/2012/05/23/000000
+12/05/23 13:55:32 INFO mapred.JobTracker: Removing task 'attempt_201205231353_0001_m_000000_0'
+12/05/23 13:55:32 INFO mapred.JobTracker: Removing task 'attempt_201205231353_0001_m_000001_0'
+12/05/23 13:55:32 INFO mapred.JobTracker: Removing task 'attempt_201205231353_0001_m_000002_0'
+12/05/23 13:55:32 INFO mapred.JobTracker: Removing task 'attempt_201205231353_0001_m_000003_0'
+12/05/23 13:55:32 INFO mapred.JobTracker: Removing task 'attempt_201205231353_0001_r_000000_0'
+
+
+

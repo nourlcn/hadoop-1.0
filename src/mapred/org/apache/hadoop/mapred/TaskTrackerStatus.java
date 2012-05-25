@@ -355,6 +355,8 @@ public class TaskTrackerStatus implements Writable {
 
   /**
    */
+  ////TODO should contain ShuffleTask Status in TaskTrackerStatus.
+  ////add ownShuffleTask()?
   public TaskTrackerStatus(String trackerName, String host, 
                            int httpPort, List<TaskStatus> taskReports, 
                            int failures, int maxMapTasks,

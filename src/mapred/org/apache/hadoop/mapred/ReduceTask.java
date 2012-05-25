@@ -350,6 +350,7 @@ class ReduceTask extends Task {
     this.umbilical = umbilical;
     job.setBoolean("mapred.skip.on", isSkipping());
 
+    ////TODO replace copy phase with ShuffleTask. 
     if (isMapOrReduce()) {
       copyPhase = getProgress().addPhase("copy");
       sortPhase  = getProgress().addPhase("sort");
@@ -379,8 +380,10 @@ class ReduceTask extends Task {
     // Initialize the codec
     codec = initCodec();
 
+    ////TODO need to set debug button here. local or cluster environment.
     boolean isLocal = "local".equals(job.get("mapred.job.tracker", "local"));
     if (!isLocal) {
+      LOG.info("[ACT-HADOOP]!!!!! verify isLocal or not, wether via Copy Phase");
       reduceCopier = new ReduceCopier(umbilical, job, reporter);
       if (!reduceCopier.fetchOutputs()) {
         if(reduceCopier.mergeThrowable instanceof FSError) {
@@ -390,6 +393,7 @@ class ReduceTask extends Task {
             " - The reduce copier failed", reduceCopier.mergeThrowable);
       }
     }
+    
     copyPhase.complete();                         // copy is already complete
     setPhase(TaskStatus.Phase.SORT);
     statusUpdate(umbilical);
@@ -1035,7 +1039,7 @@ class ReduceTask extends Task {
       
       final Path file;
       final Configuration conf;
-      
+      ////if in-memory, data is not null.
       byte[] data;
       final boolean inMemory;
       long compressedSize;
@@ -1046,6 +1050,7 @@ class ReduceTask extends Task {
         this.mapAttemptId = mapAttemptId;
         
         this.conf = conf;
+        ////if on disk, file is not null.
         this.file = file;
         this.compressedSize = size;
         
@@ -1227,6 +1232,7 @@ class ReduceTask extends Task {
       }
     }
 
+    ////TODO write MapOutputDistributor?
     /** Copies map outputs as they become available */
     private class MapOutputCopier extends Thread {
       // basic/unit connection timeout (in milliseconds)
@@ -1258,7 +1264,7 @@ class ReduceTask extends Task {
           job.getInt("mapreduce.reduce.shuffle.connect.timeout", STALLED_COPY_TIMEOUT);
         shuffleReadTimeout =
           job.getInt("mapreduce.reduce.shuffle.read.timeout", DEFAULT_READ_TIMEOUT);
-        
+        ////are outputs compressed?
         if (job.getCompressMapOutput()) {
           Class<? extends CompressionCodec> codecClass =
             job.getMapOutputCompressorClass(DefaultCodec.class);
@@ -1302,6 +1308,7 @@ class ReduceTask extends Task {
         }
       }
       
+      ////thread for fetching map output.
       /** Loop forever and fetch map outputs as they become available.
        * The thread exits when it is interrupted by {@link ReduceTaskRunner}
        */
@@ -1313,16 +1320,19 @@ class ReduceTask extends Task {
             long size = -1;
             
             synchronized (scheduledCopies) {
+              ////list of map output currently being copied.
               while (scheduledCopies.isEmpty()) {
                 scheduledCopies.wait();
               }
               loc = scheduledCopies.remove(0);
             }
+            ////get map output location
             CopyOutputErrorType error = CopyOutputErrorType.OTHER_ERROR;
             readError = false;
             try {
               shuffleClientMetrics.threadBusy();
               start(loc);
+              ////size: bytes of in-mem or ondisk data we have copied from map to reduce.
               size = copyOutput(loc);
               shuffleClientMetrics.successFetch();
               error = CopyOutputErrorType.NO_ERROR;
@@ -1393,6 +1403,8 @@ class ReduceTask extends Task {
         // Copy the map output
         MapOutput mapOutput = getMapOutput(loc, tmpMapOutput,
                                            reduceId.getTaskID().getId());
+        ////Now ,input is in Mem or local tmp file.
+        
         if (mapOutput == null) {
           throw new IOException("Failed to fetch map-output for " + 
                                 loc.getTaskAttemptId() + " from " + 
@@ -1479,7 +1491,7 @@ class ReduceTask extends Task {
         // Connect
         URL url = mapOutputLoc.getOutputLocation();
         URLConnection connection = url.openConnection();
-        
+        LOG.info("[ACT-HADOOP]Important!! URL like: " + url.toString());
         InputStream input = setupSecureConnection(mapOutputLoc, connection);
  
         // Validate header from map output
@@ -1653,6 +1665,7 @@ class ReduceTask extends Task {
         boolean createdNow = ramManager.reserve(mapOutputLength, input);
       
         // Reconnect if we need to
+        ////after wait, input is closed. need reconnect.
         if (!createdNow) {
           // Reconnect
           try {
@@ -1678,6 +1691,7 @@ class ReduceTask extends Task {
         // Are map-outputs compressed?
         if (codec != null) {
           decompressor.reset();
+          ////decompress
           input = codec.createInputStream(input, decompressor);
         }
       
@@ -1805,6 +1819,7 @@ class ReduceTask extends Task {
           while (n > 0) {
             bytesRead += n;
             shuffleClientMetrics.inputBytes(n);
+            ////write into local file.
             output.write(buf, 0, n);
 
             // indicate we're making progress
@@ -1910,6 +1925,7 @@ class ReduceTask extends Task {
     public ReduceCopier(TaskUmbilicalProtocol umbilical, JobConf conf,
                         TaskReporter reporter
                         )throws ClassNotFoundException, IOException {
+    	LOG.info("[ACT-HADOOP]!!!ReduceTask.ReduceCopier.!!!!! create new ReduceCopier.");
       
       configureClasspath(conf);
       this.reporter = reporter;
@@ -1923,6 +1939,8 @@ class ReduceTask extends Task {
       this.maxInFlight = 4 * numCopiers;
       Counters.Counter combineInputCounter = 
         reporter.getCounter(Task.Counter.COMBINE_INPUT_RECORDS);
+      ////TODO: if combiner is needed.
+      //// do not consider combiner at this moment.
       this.combinerRunner = CombinerRunner.create(conf, getTaskID(),
                                                   combineInputCounter,
                                                   reporter, null);
@@ -1931,15 +1949,20 @@ class ReduceTask extends Task {
           new CombineOutputCollector(reduceCombineOutputCounter, reporter, conf);
       }
       
+      ////io.sort.factor
       this.ioSortFactor = conf.getInt("io.sort.factor", 10);
       
+      ////abortFailureLimit
       this.abortFailureLimit = Math.max(30, numMaps / 10);
 
+      ////max failures per map before report.
       this.maxFetchFailuresBeforeReporting = conf.getInt(
           "mapreduce.reduce.shuffle.maxfetchfailures", REPORT_FAILURE_LIMIT);
 
       this.maxFailedUniqueFetches = Math.min(numMaps, 
                                              this.maxFailedUniqueFetches);
+      
+      ////when reach this value (numbers of files),merge and spill.
       this.maxInMemOutputs = conf.getInt("mapred.inmem.merge.threshold", 1000);
       this.maxInMemCopyPer =
         conf.getFloat("mapred.job.shuffle.merge.percent", 0.66f);
@@ -1980,9 +2003,10 @@ class ReduceTask extends Task {
       return numInFlight > maxInFlight;
     }
     
-    
+    ////TODO Very Important Method!!!!!!!!!
+    ////FetchOutputs from maps.!!!!!!!!!!!!
     public boolean fetchOutputs() throws IOException {
-      int totalFailures = 0;
+      int totalFailures = 0; 
       int            numInFlight = 0, numCopied = 0;
       DecimalFormat  mbpsFormat = new DecimalFormat("0.00");
       final Progress copyPhase = 
@@ -1995,15 +2019,20 @@ class ReduceTask extends Task {
         copyPhase.addPhase();       // add sub-phase per file
       }
       
+      ////mapred.reduce.parallel.copies
       copiers = new ArrayList<MapOutputCopier>(numCopiers);
       
       // start all the copying threads
       for (int i=0; i < numCopiers; i++) {
         MapOutputCopier copier = new MapOutputCopier(conf, reporter, 
             reduceTask.getJobTokenSecret());
+        ////threads for fetching map output.
         copiers.add(copier);
+        ////copy data from map to reduce. in-mem or on disk.
         copier.start();
       }
+      
+      ////TODO !!!do not care about merge!!!
       
       //start the on-disk-merge thread
       localFSMergerThread = new LocalFSMerger((LocalFileSystem)localFileSys);

@@ -23,8 +23,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.io.Writer;
 import java.lang.management.ManagementFactory;
 import java.net.BindException;
@@ -61,20 +61,16 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocalDirAllocator;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.mapred.JobSubmissionProtocol;
-import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
-import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenSecretManager;
 import org.apache.hadoop.http.HttpServer;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
-import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.ipc.RPC.VersionMismatch;
+import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.mapred.AuditLogger.Constants;
-import org.apache.hadoop.mapred.Counters.CountersExceededException;
 import org.apache.hadoop.mapred.JobHistory.Keys;
 import org.apache.hadoop.mapred.JobHistory.Listener;
 import org.apache.hadoop.mapred.JobHistory.Values;
@@ -82,6 +78,15 @@ import org.apache.hadoop.mapred.JobInProgress.KillInterruptedException;
 import org.apache.hadoop.mapred.JobStatusChangeEvent.EventType;
 import org.apache.hadoop.mapred.QueueManager.QueueACL;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
+import org.apache.hadoop.mapreduce.ClusterMetrics;
+import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal;
+import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
+import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier;
+import org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenSecretManager;
+import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.util.MBeans;
 import org.apache.hadoop.net.DNSToSwitchMapping;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
@@ -89,6 +94,7 @@ import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.net.ScriptBasedMapping;
 import org.apache.hadoop.security.AccessControlException;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.Groups;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
@@ -104,16 +110,6 @@ import org.apache.hadoop.util.HostsFileReader;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.VersionInfo;
-
-import org.apache.hadoop.mapreduce.ClusterMetrics;
-import org.apache.hadoop.mapreduce.JobSubmissionFiles;
-import org.apache.hadoop.mapreduce.TaskType;
-import org.apache.hadoop.mapreduce.security.token.DelegationTokenRenewal;
-import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
-import org.apache.hadoop.mapreduce.server.jobtracker.TaskTracker;
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.apache.hadoop.metrics2.util.MBeans;
-import org.apache.hadoop.security.Credentials;
 import org.mortbay.util.ajax.JSON;
 
 /*******************************************************
@@ -3282,6 +3278,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // Assuming JobTracker is locked on entry.
   private void updateJobInProgressListeners(JobChangeEvent event) {
     for (JobInProgressListener listener : jobInProgressListeners) {
+    	
+    	////if PRIORITY_CHANGED or START_TIME_CHANGED, QUENE will be resorted.
+    	
       listener.jobUpdated(event);
     }
   }
@@ -3309,12 +3308,15 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * {@link TaskTracker} and responds with instructions to start/stop 
    * tasks or jobs, and also 'reset' instructions during contingencies. 
    */
+  ////TODO add method to verify ShuffleTask Info.
   public synchronized HeartbeatResponse heartbeat(TaskTrackerStatus status, 
                                                   boolean restarted,
                                                   boolean initialContact,
                                                   boolean acceptNewTasks, 
                                                   short responseId) 
     throws IOException {
+	  ////.JT assign task to TT is a PULL progress.
+	  
     if (LOG.isDebugEnabled()) {
       LOG.debug("Got heartbeat from: " + status.getTrackerName() + 
                 " (restarted: " + restarted + 
@@ -3409,12 +3411,16 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             if(LOG.isDebugEnabled()) {
               LOG.debug(trackerName + " -> LaunchTask: " + task.getTaskID());
             }
+            ////after scheduler assigned tasks in List. TT and JT communicate with heartbeat.
+            ////When JT notify that List is not null, addd LaunchTaskAction with assigned Task 
             actions.add(new LaunchTaskAction(task));
           }
         }
       }
     }
       
+    ////TODO check for ShuffleTask to be launched ?
+    
     // Check for tasks to be killed
     List<TaskTrackerAction> killTasksList = getTasksToKill(trackerName);
     if (killTasksList != null) {
@@ -3929,6 +3935,9 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   public JobStatus submitJob(JobID jobId, String jobSubmitDir, Credentials ts)
       throws IOException {
+	  ////
+	  LOG.info("[ACT-HADOOP] JobTracker.submitJob()!!!!!!!!!!!!!!!");
+	  
     JobInfo jobInfo = null;
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     synchronized (this) {
@@ -4201,6 +4210,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return secretManager.renewToken(token, user);
   }  
 
+  ////TaskTrackerManager.initJob()
+  //
   public void initJob(JobInProgress job) {
     if (null == job) {
       LOG.info("Init on null job is not valid");
@@ -4208,8 +4219,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
 	        
     try {
+    	////
+    	LOG.info("[ACT-HADOOP]JobTracker.initJob()");
+    	
       JobStatus prevStatus = (JobStatus)job.getStatus().clone();
       LOG.info("Initializing " + job.getJobID());
+      ////firest, initTasks(), create cleanup setup map and reduce tasks.
       job.initTasks();
       // Inform the listeners if the job state has changed
       // Note : that the job will be in PREP state.

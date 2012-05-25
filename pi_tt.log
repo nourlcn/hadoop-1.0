@@ -1,0 +1,87 @@
+12/05/23 13:53:55 INFO mapred.TaskTracker: FILE_CACHE_SIZE for mapOutputServlet set to : 2000
+12/05/23 13:53:55 INFO mapred.UserLogCleaner: Adding job_201205162103_0001 for user-log deletion with retainTimeStamp:1337838834976
+12/05/23 13:53:55 INFO mapred.UserLogCleaner: Adding job_201205171639_0001 for user-log deletion with retainTimeStamp:1337838834976
+12/05/23 13:53:55 INFO mapred.UserLogCleaner: Adding job_201205162103_0004 for user-log deletion with retainTimeStamp:1337838834976
+12/05/23 13:53:55 INFO mapred.UserLogCleaner: Adding job_201205171639_0002 for user-log deletion with retainTimeStamp:1337838834976
+12/05/23 13:54:46 INFO mapred.TaskTracker: LaunchTaskAction (registerTask): attempt_201205231353_0001_m_000003_0 task's state:UNASSIGNED
+12/05/23 13:54:46 INFO mapred.TaskTracker: Trying to launch : attempt_201205231353_0001_m_000003_0 which needs 1 slots
+12/05/23 13:54:46 INFO mapred.TaskTracker: In TaskLauncher, current free slots : 2 and trying to launch attempt_201205231353_0001_m_000003_0 which needs 1 slots
+12/05/23 13:54:46 INFO mapred.JobLocalizer: Initializing user nourl on this TT.
+12/05/23 13:54:46 INFO mapred.JvmManager: In JvmRunner constructed JVM ID: jvm_201205231353_0001_m_-1377965323
+12/05/23 13:54:46 INFO mapred.JvmManager: JVM Runner jvm_201205231353_0001_m_-1377965323 spawned.
+12/05/23 13:54:46 INFO mapred.TaskController: Writing commands to /home/hadoop/hadoop/mapred/ttprivate/taskTracker/nourl/jobcache/job_201205231353_0001/attempt_201205231353_0001_m_000003_0/taskjvm.sh
+12/05/23 13:54:47 INFO mapred.TaskTracker: JVM with ID: jvm_201205231353_0001_m_-1377965323 given task: attempt_201205231353_0001_m_000003_0
+12/05/23 13:54:50 INFO mapred.TaskTracker: attempt_201205231353_0001_m_000003_0 0.0% setup
+12/05/23 13:54:50 INFO mapred.TaskTracker: Task attempt_201205231353_0001_m_000003_0 is done.
+12/05/23 13:54:50 INFO mapred.TaskTracker: reported output size for attempt_201205231353_0001_m_000003_0  was -1
+12/05/23 13:54:50 INFO mapred.TaskTracker: addFreeSlot : current free slots : 2
+12/05/23 13:54:50 INFO mapred.JvmManager: JVM : jvm_201205231353_0001_m_-1377965323 exited with exit code 0. Number of tasks it ran: 1
+12/05/23 13:54:52 INFO mapred.TaskTracker: Received KillTaskAction for task: attempt_201205231353_0001_m_000003_0
+12/05/23 13:54:52 INFO mapred.TaskTracker: About to purge task: attempt_201205231353_0001_m_000003_0
+12/05/23 13:54:52 INFO mapred.IndexCache: Map ID attempt_201205231353_0001_m_000003_0 not found in cache
+12/05/23 13:54:55 INFO mapred.TaskTracker: LaunchTaskAction (registerTask): attempt_201205231353_0001_m_000000_0 task's state:UNASSIGNED
+12/05/23 13:54:55 INFO mapred.TaskTracker: LaunchTaskAction (registerTask): attempt_201205231353_0001_m_000001_0 task's state:UNASSIGNED
+12/05/23 13:54:55 INFO mapred.TaskTracker: Trying to launch : attempt_201205231353_0001_m_000000_0 which needs 1 slots
+12/05/23 13:54:55 INFO mapred.TaskTracker: In TaskLauncher, current free slots : 2 and trying to launch attempt_201205231353_0001_m_000000_0 which needs 1 slots
+12/05/23 13:54:55 INFO mapred.TaskTracker: Trying to launch : attempt_201205231353_0001_m_000001_0 which needs 1 slots
+12/05/23 13:54:55 INFO mapred.TaskTracker: In TaskLauncher, current free slots : 1 and trying to launch attempt_201205231353_0001_m_000001_0 which needs 1 slots
+12/05/23 13:54:55 INFO mapred.JvmManager: In JvmRunner constructed JVM ID: jvm_201205231353_0001_m_1487404509
+12/05/23 13:54:55 INFO mapred.JvmManager: JVM Runner jvm_201205231353_0001_m_1487404509 spawned.
+12/05/23 13:54:55 INFO mapred.JvmManager: In JvmRunner constructed JVM ID: jvm_201205231353_0001_m_123489432
+12/05/23 13:54:55 INFO mapred.JvmManager: JVM Runner jvm_201205231353_0001_m_123489432 spawned.
+12/05/23 13:54:55 INFO mapred.TaskController: Writing commands to /home/hadoop/hadoop/mapred/ttprivate/taskTracker/nourl/jobcache/job_201205231353_0001/attempt_201205231353_0001_m_000000_0/taskjvm.sh
+12/05/23 13:54:55 INFO mapred.TaskController: Writing commands to /home/hadoop/hadoop/mapred/ttprivate/taskTracker/nourl/jobcache/job_201205231353_0001/attempt_201205231353_0001_m_000001_0/taskjvm.sh
+12/05/23 13:54:56 INFO mapred.TaskTracker: JVM with ID: jvm_201205231353_0001_m_1487404509 given task: attempt_201205231353_0001_m_000000_0
+12/05/23 13:54:56 INFO mapred.TaskTracker: JVM with ID: jvm_201205231353_0001_m_123489432 given task: attempt_201205231353_0001_m_000001_0
+12/05/23 13:55:06 INFO mapred.TaskTracker: attempt_201205231353_0001_m_000000_0 1.0% hdfs://coffee:9000/user/nourl/PiEstimator_TMP_3_141592654/in/part0:0+118
+12/05/23 13:55:06 INFO mapred.TaskTracker: attempt_201205231353_0001_m_000000_0 1.0% hdfs://coffee:9000/user/nourl/PiEstimator_TMP_3_141592654/in/part0:0+118
+12/05/23 13:55:06 INFO mapred.TaskTracker: Task attempt_201205231353_0001_m_000000_0 is done.
+12/05/23 13:55:06 INFO mapred.TaskTracker: reported output size for attempt_201205231353_0001_m_000000_0  was 28
+12/05/23 13:55:06 INFO mapred.TaskTracker: addFreeSlot : current free slots : 1
+12/05/23 13:55:06 INFO mapred.TaskTracker: attempt_201205231353_0001_m_000001_0 1.0% hdfs://coffee:9000/user/nourl/PiEstimator_TMP_3_141592654/in/part1:0+118
+12/05/23 13:55:06 INFO mapred.TaskTracker: attempt_201205231353_0001_m_000001_0 1.0% hdfs://coffee:9000/user/nourl/PiEstimator_TMP_3_141592654/in/part1:0+118
+12/05/23 13:55:06 INFO mapred.TaskTracker: Task attempt_201205231353_0001_m_000001_0 is done.
+12/05/23 13:55:06 INFO mapred.TaskTracker: reported output size for attempt_201205231353_0001_m_000001_0  was 28
+12/05/23 13:55:06 INFO mapred.TaskTracker: addFreeSlot : current free slots : 2
+12/05/23 13:55:07 INFO mapred.JvmManager: JVM : jvm_201205231353_0001_m_1487404509 exited with exit code 0. Number of tasks it ran: 1
+12/05/23 13:55:07 INFO mapred.JvmManager: JVM : jvm_201205231353_0001_m_123489432 exited with exit code 0. Number of tasks it ran: 1
+12/05/23 13:55:11 INFO mapred.TaskTracker: LaunchTaskAction (registerTask): attempt_201205231353_0001_r_000000_0 task's state:UNASSIGNED
+12/05/23 13:55:11 INFO mapred.TaskTracker: Trying to launch : attempt_201205231353_0001_r_000000_0 which needs 1 slots
+12/05/23 13:55:11 INFO mapred.TaskTracker: In TaskLauncher, current free slots : 2 and trying to launch attempt_201205231353_0001_r_000000_0 which needs 1 slots
+12/05/23 13:55:11 INFO mapred.JvmManager: In JvmRunner constructed JVM ID: jvm_201205231353_0001_r_-1377965323
+12/05/23 13:55:11 INFO mapred.JvmManager: JVM Runner jvm_201205231353_0001_r_-1377965323 spawned.
+12/05/23 13:55:11 INFO mapred.TaskController: Writing commands to /home/hadoop/hadoop/mapred/ttprivate/taskTracker/nourl/jobcache/job_201205231353_0001/attempt_201205231353_0001_r_000000_0/taskjvm.sh
+12/05/23 13:55:14 INFO mapred.TaskTracker: JVM with ID: jvm_201205231353_0001_r_-1377965323 given task: attempt_201205231353_0001_r_000000_0
+12/05/23 13:55:21 INFO TaskTracker.clienttrace: src: 192.168.3.237:50060, dest: 192.168.3.237:35785, bytes: 28, op: MAPRED_SHUFFLE, cliID: attempt_201205231353_0001_m_000000_0, duration: 46518340
+12/05/23 13:55:21 INFO TaskTracker.clienttrace: src: 192.168.3.237:50060, dest: 192.168.3.237:35785, bytes: 28, op: MAPRED_SHUFFLE, cliID: attempt_201205231353_0001_m_000001_0, duration: 7690911
+12/05/23 13:55:21 INFO mapred.TaskTracker: attempt_201205231353_0001_r_000000_0 0.16666667% reduce > copy (1 of 2 at 0.00 MB/s) > 
+12/05/23 13:55:21 INFO mapred.TaskTracker: attempt_201205231353_0001_r_000000_0 0.16666667% reduce > copy (1 of 2 at 0.00 MB/s) > 
+12/05/23 13:55:21 INFO mapred.TaskTracker: attempt_201205231353_0001_r_000000_0 0.16666667% reduce > copy (1 of 2 at 0.00 MB/s) > 
+12/05/23 13:55:22 INFO mapred.TaskTracker: Task attempt_201205231353_0001_r_000000_0 is in commit-pending, task state:COMMIT_PENDING
+12/05/23 13:55:22 INFO mapred.TaskTracker: attempt_201205231353_0001_r_000000_0 0.16666667% reduce > copy (1 of 2 at 0.00 MB/s) > 
+12/05/23 13:55:23 INFO mapred.TaskTracker: Received commit task action for attempt_201205231353_0001_r_000000_0
+12/05/23 13:55:24 INFO mapred.TaskTracker: attempt_201205231353_0001_r_000000_0 1.0% reduce > reduce
+12/05/23 13:55:24 INFO mapred.TaskTracker: attempt_201205231353_0001_r_000000_0 1.0% reduce > reduce
+12/05/23 13:55:24 INFO mapred.TaskTracker: Task attempt_201205231353_0001_r_000000_0 is done.
+12/05/23 13:55:24 INFO mapred.TaskTracker: reported output size for attempt_201205231353_0001_r_000000_0  was -1
+12/05/23 13:55:24 INFO mapred.TaskTracker: addFreeSlot : current free slots : 2
+12/05/23 13:55:24 INFO mapred.JvmManager: JVM : jvm_201205231353_0001_r_-1377965323 exited with exit code 0. Number of tasks it ran: 1
+12/05/23 13:55:26 INFO mapred.TaskTracker: LaunchTaskAction (registerTask): attempt_201205231353_0001_m_000002_0 task's state:UNASSIGNED
+12/05/23 13:55:26 INFO mapred.TaskTracker: Trying to launch : attempt_201205231353_0001_m_000002_0 which needs 1 slots
+12/05/23 13:55:26 INFO mapred.TaskTracker: In TaskLauncher, current free slots : 2 and trying to launch attempt_201205231353_0001_m_000002_0 which needs 1 slots
+12/05/23 13:55:26 INFO mapred.TaskTracker: Received KillTaskAction for task: attempt_201205231353_0001_r_000000_0
+12/05/23 13:55:26 INFO mapred.TaskTracker: About to purge task: attempt_201205231353_0001_r_000000_0
+12/05/23 13:55:26 INFO mapred.JvmManager: In JvmRunner constructed JVM ID: jvm_201205231353_0001_m_1280364489
+12/05/23 13:55:26 INFO mapred.JvmManager: JVM Runner jvm_201205231353_0001_m_1280364489 spawned.
+12/05/23 13:55:26 INFO mapred.TaskController: Writing commands to /home/hadoop/hadoop/mapred/ttprivate/taskTracker/nourl/jobcache/job_201205231353_0001/attempt_201205231353_0001_m_000002_0/taskjvm.sh
+12/05/23 13:55:27 INFO mapred.TaskTracker: JVM with ID: jvm_201205231353_0001_m_1280364489 given task: attempt_201205231353_0001_m_000002_0
+12/05/23 13:55:27 INFO mapred.TaskTracker: attempt_201205231353_0001_m_000002_0 0.0% 
+12/05/23 13:55:30 INFO mapred.TaskTracker: attempt_201205231353_0001_m_000002_0 0.0% cleanup
+12/05/23 13:55:30 INFO mapred.TaskTracker: Task attempt_201205231353_0001_m_000002_0 is done.
+12/05/23 13:55:30 INFO mapred.TaskTracker: reported output size for attempt_201205231353_0001_m_000002_0  was -1
+12/05/23 13:55:30 INFO mapred.TaskTracker: addFreeSlot : current free slots : 2
+12/05/23 13:55:30 INFO mapred.JvmManager: JVM : jvm_201205231353_0001_m_1280364489 exited with exit code 0. Number of tasks it ran: 1
+12/05/23 13:55:32 INFO mapred.TaskTracker: Received 'KillJobAction' for job: job_201205231353_0001
+12/05/23 13:55:32 INFO mapred.IndexCache: Map ID attempt_201205231353_0001_m_000002_0 not found in cache
+12/05/23 13:55:32 INFO mapred.UserLogCleaner: Adding job_201205231353_0001 for user-log deletion with retainTimeStamp:1337838932804
+
