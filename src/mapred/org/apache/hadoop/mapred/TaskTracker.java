@@ -2266,6 +2266,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     
   private TaskLauncher mapLauncher;
   private TaskLauncher reduceLauncher;
+  private TaskLauncher shuffleLauncher;
+  
   ////TODO add ShuffleLauncher.
   public JvmManager getJvmManagerInstance() {
     return jvmManager;
@@ -2276,15 +2278,20 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     this.jvmManager = jvmManager;
   }
 
+  // add to task queue, next step is launch.
   private void addToTaskQueue(LaunchTaskAction action) {
-    ////TODO act.getTask().isShuffleTask() ?
     if (action.getTask().isMapTask()) {
       mapLauncher.addToTaskQueue(action);
     } else {
-      reduceLauncher.addToTaskQueue(action);
+      if (action.getTask().isShuffleTask()) {
+        // this is shuffle task.
+        shuffleLauncher.addToTaskQueue(action);
+      } else {
+        reduceLauncher.addToTaskQueue(action);
+      }
     }
   }
-  
+
   class TaskLauncher extends Thread {
     private IntWritable numFreeSlots;
     private final int maxSlots;
