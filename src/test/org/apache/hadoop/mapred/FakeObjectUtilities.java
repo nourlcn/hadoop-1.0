@@ -146,7 +146,8 @@ public class FakeObjectUtilities {
       TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId, 
           1.0f, 1, TaskStatus.State.SUCCEEDED, "", "", 
           tip.machineWhereTaskRan(taskId), 
-          tip.isMapTask() ? Phase.MAP : Phase.REDUCE, new Counters());
+          tip.isMapTask() ? Phase.MAP : (tip.isShuffleTask() ? Phase.SHUFFLE
+              : Phase.REDUCE), new Counters());
       updateTaskStatus(tip, status);
     }
   
@@ -154,18 +155,20 @@ public class FakeObjectUtilities {
         String taskTracker) {
       addRunningTaskToTIP(tip, taskId, new TaskTrackerStatus(taskTracker,
           JobInProgress.convertTrackerNameToHostName(taskTracker)), true);
-      TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId, 
-          0.0f, 1, TaskStatus.State.RUNNING, "", "", taskTracker,
-          tip.isMapTask() ? Phase.MAP : Phase.REDUCE, new Counters());
+      TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId,
+          0.0f, 1, TaskStatus.State.RUNNING, "", "", taskTracker, tip
+              .isMapTask() ? Phase.MAP : (tip.isShuffleTask() ? Phase.SHUFFLE
+              : Phase.REDUCE), new Counters());
       updateTaskStatus(tip, status);
     }
 
     public void progressMade(TaskAttemptID taskId, float progress) {
       TaskInProgress tip = jobtracker.taskidToTIPMap.get(taskId);
-      TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId, 
-          progress, 1, TaskStatus.State.RUNNING, "", "", 
-          tip.machineWhereTaskRan(taskId), 
-          tip.isMapTask() ? Phase.MAP : Phase.REDUCE, new Counters());
+      TaskStatus status = TaskStatus.createTaskStatus(tip.isMapTask(), taskId,
+          progress, 1, TaskStatus.State.RUNNING, "", "", tip
+              .machineWhereTaskRan(taskId),
+          tip.isMapTask() ? Phase.MAP : (tip.isShuffleTask() ? Phase.SHUFFLE
+              : Phase.REDUCE), new Counters());
       updateTaskStatus(tip, status);
     }
   }
