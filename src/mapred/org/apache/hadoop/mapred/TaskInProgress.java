@@ -293,6 +293,12 @@ class TaskInProgress {
   public boolean isMapTask() {
     return splitInfo != null;
   }
+  
+  ////Whether this is a shuffle task
+  public boolean isShuffleTask(){
+    //default return false
+    return false;
+  }
     
   /**
    * Returns the type of the {@link TaskAttemptID} passed. 

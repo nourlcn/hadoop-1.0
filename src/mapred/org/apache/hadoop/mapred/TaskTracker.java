@@ -285,6 +285,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
   volatile int mapTotal = 0;
   volatile int reduceTotal = 0;
+  volatile int shuffleTotal = 0;
   boolean justStarted = true;
   boolean justInited = true;
   // Mark reduce tasks that are shuffling to rollback their events index
@@ -322,6 +323,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   private Localizer localizer;
   private int maxMapSlots;
   private int maxReduceSlots;
+  private int maxShuffleSlots;
   private int failures;
   final long mapRetainSize;
   final long reduceRetainSize;
@@ -745,6 +747,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     this.runningJobs = new TreeMap<JobID, RunningJob>();
     this.mapTotal = 0;
     this.reduceTotal = 0;
+    ////
+    this.shuffleTotal = 0;
     this.acceptNewTasks = true;
     this.status = null;
 
@@ -834,8 +838,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
     mapLauncher = new TaskLauncher(TaskType.MAP, maxMapSlots);
     reduceLauncher = new TaskLauncher(TaskType.REDUCE, maxReduceSlots);
+    shuffleLauncher = new TaskLauncher(TaskType.Shuffle, maxShuffleSlots);
+    
     mapLauncher.start();
     reduceLauncher.start();
+    shuffleLauncher.start();
 
     // create a localizer instance
     setLocalizer(new Localizer(localFs, localStorage.getDirs()));
@@ -1419,6 +1426,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
                   "mapred.tasktracker.map.tasks.maximum", 2);
     maxReduceSlots = conf.getInt(
                   "mapred.tasktracker.reduce.tasks.maximum", 2);
+    ////currently, shuffle slots is equal to reduce slots.
+    maxShuffleSlots = maxReduceSlots;
+    
     diskHealthCheckInterval = conf.getLong(DISK_HEALTH_CHECK_INTERVAL_PROPERTY,
                                            DEFAULT_DISK_HEALTH_CHECK_INTERVAL);
     UserGroupInformation.setConfiguration(originalConf);
@@ -1707,6 +1717,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         if (actions != null){ 
           for(TaskTrackerAction action: actions) {
             if (action instanceof LaunchTaskAction) {
+              ////when to add task to tasklauncher?!
               addToTaskQueue((LaunchTaskAction)action);
             } else if (action instanceof CommitTaskAction) {
               ////TODO  commit Action do what ?
@@ -1877,6 +1888,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
             !taskStatus.inTaskCleanupPhase()) {
           if (taskStatus.getIsMap()) {
             mapTotal--;
+          } else if (taskStatus.getIsShuffle()) {
+            //TODO verify
+            shuffleTotal--;
           } else {
             reduceTotal--;
           }
@@ -2424,10 +2438,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       tasks.put(t.getTaskID(), tip);
       runningTasks.put(t.getTaskID(), tip);
       boolean isMap = t.isMapTask();
+      boolean isShuffle = t.isShuffleTask();
       if (isMap) {
         mapTotal++;
       } else {
-        reduceTotal++;
+        if (isShuffle) {
+          shuffleTotal++;
+        } else {
+          reduceTotal++;
+        }
       }
     }
     return tip;
@@ -4069,6 +4088,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   //called from unit test
   synchronized void setMaxReduceSlots(int reduceSlots) {
     maxReduceSlots = reduceSlots;
+  }
+  
+  ////for unit test
+  synchronized void setMaxShuffleSlots(int shuffleSlots){
+    maxShuffleSlots = shuffleSlots;
   }
 
   /**

@@ -118,8 +118,12 @@ public class JobInProgress {
   // Counters to track currently running/finished/failed Map/Reduce task-attempts
   int runningMapTasks = 0;
   int runningReduceTasks = 0;
+  //TODO
+  int runningShuffleTasks = 0;
   int finishedMapTasks = 0;
   int finishedReduceTasks = 0;
+  //TODO
+  int finishedShuffleTasks = 0;
   int failedMapTasks = 0; 
   int failedReduceTasks = 0;
   private static long DEFAULT_REDUCE_INPUT_LIMIT = -1L;
@@ -166,7 +170,9 @@ public class JobInProgress {
 
   //A list of non-running reduce TIPs
   Set<TaskInProgress> nonRunningShuffles;
- 
+
+  // A list of running shuffles.
+  Set<TaskInProgress> runningShuffles;
 
   // A set of running reduce TIPs
   Set<TaskInProgress> runningReduces;
@@ -736,10 +742,10 @@ public class JobInProgress {
       NetUtils.verifyHostnames(split.getLocations());
     }
     
-    ////for debug
-    for (TaskSplitMetaInfo split : splits) {
-      LOG.error("[ACT-HADOOP]split.getLocations() is " + split.getLocations());
-    }
+//    ////for debug
+//    for (TaskSplitMetaInfo split : splits) {
+//      LOG.error("[ACT-HADOOP]split.getLocations() is " + split.getLocations());
+//    }
     
     jobtracker.getInstrumentation().addWaitingMaps(getJobID(), numMapTasks);
     jobtracker.getInstrumentation().addWaitingReduces(getJobID(), numReduceTasks);
@@ -772,13 +778,14 @@ public class JobInProgress {
     this.launchTime = jobtracker.getClock().getTime();
     
 
+    ////TODO init shuffle TaskInProgress
     //// Create Shuffle Tasks.
     this.shuffles = new TaskInProgress[numShuffleTasks];
     for (int i = 0; i < numShuffleTasks; i++) {
       shuffles[i] = new TaskInProgress(jobId, jobFile, 
                                       numMapTasks, i, 
                                       jobtracker, conf, this, numSlotsPerShuffle);
-      nonRunningShuffles.add(reduces[i]);
+      nonRunningShuffles.add(shuffles[i]);
     }
     
     LOG.info("[ACT-HADOOP]Create Shuffle Task Success!");
@@ -1698,7 +1705,6 @@ public class JobInProgress {
            !launchedSetup && !jobKilled && !jobFailed);
   }
   
-
   /**
    * Return a ReduceTask, if appropriate, to run on the given tasktracker.
    * We don't have cache-sensitivity for reduce tasks, as they
@@ -1738,8 +1744,12 @@ public class JobInProgress {
       return null;
     }
 
-    int  target = findNewReduceTask(tts, clusterSize, numUniqueHosts, 
-                                    status.reduceProgress());
+////    int  target = findNewReduceTask(tts, clusterSize, numUniqueHosts, 
+////                                    status.reduceProgress());
+    
+    int  target = findNewShuffleReduceTask(tts, clusterSize, numUniqueHosts, 
+      status.reduceProgress(), true);
+        
     if (target == -1) {
       return null;
     }
@@ -1751,6 +1761,7 @@ public class JobInProgress {
 
     return result;
   }
+
   
   // returns the (cache)level at which the nodes matches
   private int getMatchingLevelForNodes(Node n1, Node n2) {
@@ -2147,6 +2158,20 @@ public class JobInProgress {
     }
   }
   
+  
+  /**
+   * Adds a shuffle tip to the list of running shuffles.
+   * @param tip the tip that needs to be scheduled as running
+   */
+  protected synchronized void scheduleShuffle(int ReduceTaskInProgressId) {
+    if (runningShuffles == null) {
+      LOG.warn("Running cache for shuffles missing!! "
+               + "Job details are missing.");
+      return;
+    }
+    runningShuffles.add(shuffles[ReduceTaskInProgressId]);
+  }
+  
   /**
    * Adds a reduce tip to the list of running reduces
    * @param tip the tip that needs to be scheduled as running
@@ -2195,6 +2220,8 @@ public class JobInProgress {
    * @param numUniqueHosts number of unique hosts that run trask trackers
    * @param removeFailedTip whether to remove the failed tips
    */
+  ////最好加入shuffle的状态，1.是否在该节点执行失败过 2.是否被调度（当前不会，当前shuffle和reduce是一个pair）
+  ////供判断是否返回改taskinprogress id用。
   private synchronized TaskInProgress findTaskFromList(
       Collection<TaskInProgress> tips, TaskTrackerStatus ttStatus,
       int numUniqueHosts,
@@ -2506,6 +2533,68 @@ public class JobInProgress {
     return -1;
   }
 
+  /**same as findNewReduceTask(), but split shuffle task.
+   * future, will replace findNewReduceTask
+   * @return the index in tasks of the selected task (or -1 for no task)
+   */
+  private synchronized int findNewShuffleReduceTask(TaskTrackerStatus tts, 
+                                             int clusterSize,
+                                             int numUniqueHosts,
+                                             double avgProgress, boolean shuffletask){
+
+    if (numReduceTasks == 0) {
+      if(LOG.isDebugEnabled()) {
+        LOG.debug("No reduces to schedule for " + profile.getJobID());
+      }
+      return -1;
+    }
+
+    String taskTracker = tts.getTrackerName();
+    TaskInProgress tip = null;
+    
+    // Update the last-known clusterSize
+    this.clusterSize = clusterSize;
+
+    if (!shouldRunOnTaskTracker(taskTracker)) {
+      return -1;
+    }
+
+    // 1. check for a never-executed reduce tip
+    // reducers don't have a cache and so pass -1 to explicitly call that out
+    //
+    //do not need to add shuffle related statement at now, not for later.
+    tip = findTaskFromList(nonRunningReduces, tts, numUniqueHosts, false);
+    if (tip != null) {
+      //add tip into runningReduces.
+      ////
+      int id = tip.getIdWithinJob();
+      if (shuffletask)
+      {
+        scheduleShuffle(id);
+      }
+      scheduleReduce(tip);
+      return id;
+    }
+
+    // 2. check for a reduce tip to be speculated
+    if (hasSpeculativeReduces) {
+      tip = findSpeculativeTask(runningReduces, tts, avgProgress, 
+                                jobtracker.getClock().getTime(), false);
+      if (tip != null) {
+        ////
+        int id = tip.getIdWithinJob();
+        if (shuffletask){
+          scheduleShuffle(id);
+        }
+        scheduleReduce(tip);
+        return id;
+      }
+    }
+
+    return -1;
+  
+  }
+  
   /**
    * Find new reduce task
    * @param tts The task tracker that is asking for a task
@@ -2537,8 +2626,11 @@ public class JobInProgress {
 
     // 1. check for a never-executed reduce tip
     // reducers don't have a cache and so pass -1 to explicitly call that out
+    //
+    //do not need to add shuffle related statement at now, not for later.
     tip = findTaskFromList(nonRunningReduces, tts, numUniqueHosts, false);
     if (tip != null) {
+      //add tip into runningReduces.
       scheduleReduce(tip);
       return tip.getIdWithinJob();
     }
@@ -2556,20 +2648,6 @@ public class JobInProgress {
     return -1;
   }
   
-  /**
-   * Find new Shuffle task
-   * 
-   * @param tts The task tracker that is asking for a task
-   * @param clusterSize The number of task trackers in the cluster
-   * @param numUniqueHosts The number of hosts that run task trackers
-   * @param avgProgress The average progress of this kind of task in this job
-   * @return the index in tasks of the selected task (or -1 for no task)
-   */
-  private synchronized int findNewShuffleTask(TaskTrackerStatus tts,int clusterSize, int numUniqueHosts, double avgProgress){
-    //TODO add function
-    return -1;
-  }
-
   private boolean shouldRunOnTaskTracker(String taskTracker) {
     //
     // Check if too many tasks of this job have failed on this
@@ -2656,17 +2734,18 @@ public class JobInProgress {
                                         trackerHostname, taskType,
                                         status.getStateString(), 
                                         status.getCounters()); 
-    }else{
-      JobHistory.ReduceAttempt.logStarted( status.getTaskID(), status.getStartTime(), 
-                                          status.getTaskTracker(),
-                                          ttStatus.getHttpPort(), 
-                                          taskType); 
-      JobHistory.ReduceAttempt.logFinished(status.getTaskID(), status.getShuffleFinishTime(),
-                                           status.getSortFinishTime(), status.getFinishTime(), 
-                                           trackerHostname, 
-                                           taskType,
-                                           status.getStateString(), 
-                                           status.getCounters()); 
+    } else {
+      if (status.getIsShuffle()) {
+        //TODO
+      } else {
+        JobHistory.ReduceAttempt.logStarted(status.getTaskID(),
+            status.getStartTime(), status.getTaskTracker(),
+            ttStatus.getHttpPort(), taskType);
+        JobHistory.ReduceAttempt.logFinished(status.getTaskID(),
+            status.getShuffleFinishTime(), status.getSortFinishTime(),
+            status.getFinishTime(), trackerHostname, taskType,
+            status.getStateString(), status.getCounters());
+      }
     }
     JobHistory.Task.logFinished(tip.getTIPId(), 
                                 taskType,
@@ -3118,14 +3197,18 @@ public class JobInProgress {
           taskTrackerHostName, diagInfo, taskType);
       }
     } else {
-      JobHistory.ReduceAttempt.logStarted(taskid, startTime, 
-        taskTrackerName, taskTrackerPort, taskType);
-      if (taskStatus.getRunState() == TaskStatus.State.FAILED) {
-        JobHistory.ReduceAttempt.logFailed(taskid, finishTime,
-          taskTrackerHostName, diagInfo, taskType);
+      if (taskStatus.getIsShuffle()) {
+        // TODO add content.
       } else {
-        JobHistory.ReduceAttempt.logKilled(taskid, finishTime,
-          taskTrackerHostName, diagInfo, taskType);
+        JobHistory.ReduceAttempt.logStarted(taskid, startTime, taskTrackerName,
+            taskTrackerPort, taskType);
+        if (taskStatus.getRunState() == TaskStatus.State.FAILED) {
+          JobHistory.ReduceAttempt.logFailed(taskid, finishTime,
+              taskTrackerHostName, diagInfo, taskType);
+        } else {
+          JobHistory.ReduceAttempt.logKilled(taskid, finishTime,
+              taskTrackerHostName, diagInfo, taskType);
+        }
       }
     }
         

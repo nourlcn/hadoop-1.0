@@ -75,7 +75,9 @@ class MemoryMatcher {
           long memSizePerMapSlot = scheduler.getMemSizeForMapSlot(); 
           myVmem = 
             memSizePerMapSlot * task.getNumSlots();
-        } else if (!task.getIsMap()
+        } else
+          //TODO need to add shuffle task content?
+          if (!task.getIsMap()
             && taskType == TaskType.REDUCE) {
           long memSizePerReduceSlot = scheduler.getMemSizeForReduceSlot(); 
           myVmem = memSizePerReduceSlot * task.getNumSlots();

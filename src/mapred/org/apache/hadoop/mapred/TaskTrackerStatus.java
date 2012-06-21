@@ -53,6 +53,8 @@ public class TaskTrackerStatus implements Writable {
   volatile long lastSeen;
   private int maxMapTasks;
   private int maxReduceTasks;
+  private int maxShuffleTasks;
+  
   private TaskTrackerHealthStatus healthStatus;
    
   public static final int UNAVAILABLE = -1;
@@ -369,6 +371,9 @@ public class TaskTrackerStatus implements Writable {
     this.failures = failures;
     this.maxMapTasks = maxMapTasks;
     this.maxReduceTasks = maxReduceTasks;
+    ////TODO  verify!!
+    this.maxShuffleTasks = this.maxReduceTasks;
+    
     this.resStatus = new ResourceStatus();
     this.healthStatus = new TaskTrackerHealthStatus();
   }
@@ -495,6 +500,45 @@ public class TaskTrackerStatus implements Writable {
   }
   
 
+  ////
+
+  /**
+   * Get the number of running reduce tasks.
+   * @return the number of running reduce tasks
+   */
+  public int countShuffleTasks() {
+    int shuffleCount = 0;
+    for (TaskStatus ts : taskReports) {
+      if (ts.getIsShuffle() && isTaskRunning(ts)) {
+        shuffleCount++;
+      }
+    }
+    return shuffleCount;
+  }
+
+  /**
+   * Get the number of occupied shuffle slots.
+   * @return the number of occupied reduce slots
+   */
+  public int countOccupiedShuffleSlots() {
+    int shuffleSlotsCount = 0;
+    for (TaskStatus ts : taskReports) {
+      if (ts.getIsShuffle() && isTaskRunning(ts)) {
+        shuffleSlotsCount += ts.getNumSlots();
+      }
+    }
+    return shuffleSlotsCount;
+  }
+  
+  /**
+   * Get available shuffle slots.
+   * @return available reduce slots
+   */
+  public int getAvailableShuffleSlots() {
+    return getMaxShuffleSlots() - countOccupiedShuffleSlots();
+  }
+  
+  
   /**
    */
   public long getLastSeen() {
@@ -522,6 +566,10 @@ public class TaskTrackerStatus implements Writable {
     return maxReduceTasks;
   }  
   
+  public int getMaxShuffleSlots()
+  {
+    return maxShuffleTasks;
+  }
   /**
    * Return the {@link ResourceStatus} object configured with this
    * status.
@@ -657,6 +705,9 @@ public class TaskTrackerStatus implements Writable {
     out.writeInt(failures);
     out.writeInt(maxMapTasks);
     out.writeInt(maxReduceTasks);
+    //TODO verify!!!
+    out.writeInt(maxShuffleTasks);
+    
     resStatus.write(out);
     out.writeInt(taskReports.size());
 
@@ -673,6 +724,9 @@ public class TaskTrackerStatus implements Writable {
     this.failures = in.readInt();
     this.maxMapTasks = in.readInt();
     this.maxReduceTasks = in.readInt();
+    ////TODO verify!!
+    this.maxShuffleTasks = in.readInt();
+    
     resStatus.readFields(in);
     taskReports.clear();
     int numTasks = in.readInt();

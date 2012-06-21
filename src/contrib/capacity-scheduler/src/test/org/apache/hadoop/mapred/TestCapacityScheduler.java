@@ -304,6 +304,11 @@ public class TestCapacityScheduler extends TestCase {
       finishedReduceTasks++;
     }
     
+    public void shuffleTaskFinished(){
+      runningShuffleTasks --;
+      finishedShuffleTasks++;
+    }
+    
     private TaskAttemptID getTaskAttemptID(boolean isMap, boolean isSpeculative) {
       JobID jobId = getJobID();
       if (!isSpeculative) {
@@ -447,6 +452,7 @@ public class TestCapacityScheduler extends TestCase {
   static class FakeTaskTrackerManager implements TaskTrackerManager {
     int maps = 0;
     int reduces = 0;
+    int shuffles = 0;
     int maxMapTasksPerTracker = 2;
     int maxReduceTasksPerTracker = 1;
     List<JobInProgressListener> mylisteners =
@@ -613,8 +619,13 @@ public class TestCapacityScheduler extends TestCase {
         maps--;
         j.mapTaskFinished();
       } else {
-        reduces--;
-        j.reduceTaskFinished();
+        if (status.getIsShuffle()) {
+          shuffles--;
+          j.shuffleTaskFinished();
+        } else {
+          reduces--;
+          j.reduceTaskFinished();
+        }
       }
       status.setRunState(TaskStatus.State.SUCCEEDED);
     }

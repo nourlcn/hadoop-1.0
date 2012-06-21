@@ -3278,9 +3278,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   // Assuming JobTracker is locked on entry.
   private void updateJobInProgressListeners(JobChangeEvent event) {
     for (JobInProgressListener listener : jobInProgressListeners) {
-    	
-    	////if PRIORITY_CHANGED or START_TIME_CHANGED, QUENE will be resorted.
-    	
       listener.jobUpdated(event);
     }
   }
@@ -3308,15 +3305,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    * {@link TaskTracker} and responds with instructions to start/stop 
    * tasks or jobs, and also 'reset' instructions during contingencies. 
    */
-  ////TODO add method to verify ShuffleTask Info.
   public synchronized HeartbeatResponse heartbeat(TaskTrackerStatus status, 
                                                   boolean restarted,
                                                   boolean initialContact,
                                                   boolean acceptNewTasks, 
                                                   short responseId) 
     throws IOException {
-	  ////.JT assign task to TT is a PULL progress.
-	  
     if (LOG.isDebugEnabled()) {
       LOG.debug("Got heartbeat from: " + status.getTrackerName() + 
                 " (restarted: " + restarted + 
@@ -3411,16 +3405,12 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
             if(LOG.isDebugEnabled()) {
               LOG.debug(trackerName + " -> LaunchTask: " + task.getTaskID());
             }
-            ////after scheduler assigned tasks in List. TT and JT communicate with heartbeat.
-            ////When JT notify that List is not null, addd LaunchTaskAction with assigned Task 
             actions.add(new LaunchTaskAction(task));
           }
         }
       }
     }
       
-    ////TODO check for ShuffleTask to be launched ?
-    
     // Check for tasks to be killed
     List<TaskTrackerAction> killTasksList = getTasksToKill(trackerName);
     if (killTasksList != null) {
@@ -3569,27 +3559,56 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       taskTrackers.put(trackerName, taskTracker);
       
       if (LOG.isDebugEnabled()) {
-        int runningMaps = 0, runningReduces = 0;
-        int commitPendingMaps = 0, commitPendingReduces = 0;
-        int unassignedMaps = 0, unassignedReduces = 0;
-        int miscMaps = 0, miscReduces = 0;
+        int runningMaps = 0, runningReduces = 0, runningShuffles = 0;
+        int commitPendingMaps = 0, commitPendingReduces = 0, commitPendingShuffles = 0;
+        int unassignedMaps = 0, unassignedReduces = 0, unassignedShuffles = 0;
+        int miscMaps = 0, miscReduces = 0, miscShuffles = 0;
         List<TaskStatus> taskReports = status.getTaskReports();
         for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
           TaskStatus ts = (TaskStatus) it.next();
           boolean isMap = ts.getIsMap();
+          boolean isShuffle = ts.getIsShuffle();
           TaskStatus.State state = ts.getRunState();
           if (state == TaskStatus.State.RUNNING) {
-            if (isMap) { ++runningMaps; }
-            else { ++runningReduces; }
+            if (isMap) {
+              ++runningMaps;
+            } else {
+              if (isShuffle) {
+                ++runningShuffles;
+              } else {
+                ++runningReduces;
+              }
+            }
           } else if (state == TaskStatus.State.UNASSIGNED) {
-            if (isMap) { ++unassignedMaps; }
-            else { ++unassignedReduces; }
+            if (isMap) {
+              ++unassignedMaps;
+            } else {
+              if (isShuffle) {
+                ++unassignedShuffles;
+              } else {
+                ++unassignedReduces;
+              }
+            }
           } else if (state == TaskStatus.State.COMMIT_PENDING) {
-            if (isMap) { ++commitPendingMaps; }
-            else { ++commitPendingReduces; }
+            if (isMap) {
+              ++commitPendingMaps;
+            } else {
+              if (isShuffle) {
+                ++commitPendingShuffles;
+              } else {
+                ++commitPendingReduces;
+              }
+            }
           } else {
-            if (isMap) { ++miscMaps; } 
-            else { ++miscReduces; } 
+            if (isMap) {
+              ++miscMaps;
+            } else {
+              if (isShuffle) {
+                ++miscShuffles;
+              } else {
+                ++miscReduces;
+              }
+            }
           }
         }
         LOG.debug(trackerName + ": Status -" +
@@ -3935,9 +3954,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   public JobStatus submitJob(JobID jobId, String jobSubmitDir, Credentials ts)
       throws IOException {
-	  ////
-	  LOG.info("[ACT-HADOOP] JobTracker.submitJob()!!!!!!!!!!!!!!!");
-	  
     JobInfo jobInfo = null;
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     synchronized (this) {
@@ -4210,8 +4226,6 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     return secretManager.renewToken(token, user);
   }  
 
-  ////TaskTrackerManager.initJob()
-  //
   public void initJob(JobInProgress job) {
     if (null == job) {
       LOG.info("Init on null job is not valid");
@@ -4219,12 +4233,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     }
 	        
     try {
-    	////
-    	LOG.info("[ACT-HADOOP]JobTracker.initJob()");
-    	
       JobStatus prevStatus = (JobStatus)job.getStatus().clone();
       LOG.info("Initializing " + job.getJobID());
-      ////firest, initTasks(), create cleanup setup map and reduce tasks.
       job.initTasks();
       // Inform the listeners if the job state has changed
       // Note : that the job will be in PREP state.

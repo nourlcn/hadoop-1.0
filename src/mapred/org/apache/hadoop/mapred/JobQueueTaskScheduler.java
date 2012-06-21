@@ -190,7 +190,7 @@ class JobQueueTaskScheduler extends TaskScheduler {
             // Leave some free slots in the cluster for future task-failures,
             // speculative tasks etc. beyond the highest priority job
             if (exceededMapPadding) {
-              break scheduleMaps;
+              break   scheduleMaps;
             }
            
             // Try all jobs again for the next Map task 
@@ -238,7 +238,7 @@ class JobQueueTaskScheduler extends TaskScheduler {
             continue;
           }
 
-//          ////Launch Shuffle Task before Shuffle Task.
+//          ////Launch Shuffle Task before Reduce Task.
 //          Task st = job.obtainNewShuffleTask(taskTrackerStatus,
 //              numTaskTrackers, taskTrackerManager.getNumberOfUniqueHosts());
 //          

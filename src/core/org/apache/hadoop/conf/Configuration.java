@@ -143,6 +143,9 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
   private static final Log LOG =
     LogFactory.getLog(Configuration.class);
 
+  ////add splitshufflemode
+  private boolean shuffletaskmode = true;
+  
   private boolean quietmode = true;
   
   /**
@@ -1451,5 +1454,13 @@ public class Configuration implements Iterable<Map.Entry<String,String>>,
       }
     }
     return result;
+  }
+
+  ////get and set shuffletask mode
+  public boolean isShuffletaskmode() {
+    return shuffletaskmode;
+  }
+  public void setShuffletaskmode(boolean shuffletaskmode) {
+    this.shuffletaskmode = shuffletaskmode;
   }
 }
