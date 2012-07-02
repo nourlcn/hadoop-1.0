@@ -107,6 +107,12 @@ class MapTask extends Task {
   public boolean isMapTask() {
     return true;
   }
+  
+  @Override
+  public boolean isShuffleTask() {
+    return false;
+  }
+  
 
   @Override
   public void localizeConfiguration(JobConf conf)

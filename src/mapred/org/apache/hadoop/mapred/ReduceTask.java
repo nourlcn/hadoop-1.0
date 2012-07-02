@@ -185,6 +185,11 @@ class ReduceTask extends Task {
     return false;
   }
 
+  @Override
+  public boolean isShuffleTask() {
+    return false;
+  }
+  
   public int getNumMaps() { return numMaps; }
   
   /**

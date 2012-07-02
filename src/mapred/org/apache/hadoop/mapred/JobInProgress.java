@@ -2533,7 +2533,9 @@ public class JobInProgress {
     return -1;
   }
 
-  /**same as findNewReduceTask(), but split shuffle task.
+  /**
+   * @nourlcn add this function.
+   * same as findNewReduceTask(), but split shuffle task.
    * future, will replace findNewReduceTask
    * @return the index in tasks of the selected task (or -1 for no task)
    */
