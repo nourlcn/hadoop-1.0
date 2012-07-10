@@ -38,6 +38,10 @@ abstract class TaskTrackerAction implements Writable {
    * 
    */
   public static enum ActionType {
+    /** wether to add LAUNCH_SHUFFLE */
+    ////TODO if shuffle as a service.
+    //LAUNCH_SHUFFLE
+    
     /** Launch a new task. */
     LAUNCH_TASK,
     
