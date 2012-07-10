@@ -227,6 +227,7 @@ class JobQueueTaskScheduler extends TaskScheduler {
     final int availableReduceSlots = 
       Math.min((trackerCurrentReduceCapacity - trackerRunningReduces), 1);
     boolean exceededReducePadding = false;
+    
     //TODO stage2: need to consider shuffle and reduce slots, >0 or >1 ? 
     if (availableReduceSlots > 0) {
       exceededReducePadding = exceededPadding(false, clusterStatus, 
@@ -242,10 +243,16 @@ class JobQueueTaskScheduler extends TaskScheduler {
 //          Task st = job.obtainNewShuffleTask(taskTrackerStatus,
 //              numTaskTrackers, taskTrackerManager.getNumberOfUniqueHosts());
 //          
+          
+          ////start shuffle task when start reduce task, 
+          ////not generate shuffle and reduce together.
+          LOG.info("[ACT-HADOOP]JobQueueTaskScheduler.obtainNewReduceTask");
+          
           Task t = 
             job.obtainNewReduceTask(taskTrackerStatus, numTaskTrackers, 
                                     taskTrackerManager.getNumberOfUniqueHosts()
                                     );
+          
           if (t != null) {
             assignedTasks.add(t);
             break;
