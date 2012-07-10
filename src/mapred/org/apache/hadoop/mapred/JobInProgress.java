@@ -2543,7 +2543,6 @@ public class JobInProgress {
                                              int clusterSize,
                                              int numUniqueHosts,
                                              double avgProgress, boolean shuffletask){
-
     if (numReduceTasks == 0) {
       if(LOG.isDebugEnabled()) {
         LOG.debug("No reduces to schedule for " + profile.getJobID());
