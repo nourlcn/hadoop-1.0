@@ -53,6 +53,8 @@ public class TaskTrackerStatus implements Writable {
   volatile long lastSeen;
   private int maxMapTasks;
   private int maxReduceTasks;
+
+  ////may be we do not need to limit maxShuffleTasks if shuffle as a service.
   private int maxShuffleTasks;
   
   private TaskTrackerHealthStatus healthStatus;
@@ -67,6 +69,10 @@ public class TaskTrackerStatus implements Writable {
     private long totalPhysicalMemory;
     private long mapSlotMemorySizeOnTT;
     private long reduceSlotMemorySizeOnTT;
+
+    ////TODO add shuffle res control.
+    private long shuffleSlotMemorySizeOnTT;
+    
     private long availableSpace;
     
     private long availableVirtualMemory = UNAVAILABLE; // in byte
@@ -167,6 +173,17 @@ public class TaskTrackerStatus implements Writable {
       return reduceSlotMemorySizeOnTT;
     }
 
+    
+    //// TODO add res control.
+    //// see getReduceSlotMemorySizeOnTT call method/usage.
+    void setShuffleSlotMemorySizeOnTT(long mem) {
+      shuffleSlotMemorySizeOnTT = mem;
+    }
+    long getShuffleSlotMemorySizeOnTT() {
+      return shuffleSlotMemorySizeOnTT;
+    }
+    
+    
     /**
      * Set the available disk space on the TT
      * @param availSpace
