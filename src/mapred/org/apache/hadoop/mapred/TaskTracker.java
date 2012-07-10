@@ -1619,7 +1619,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
               break;
             }
           }
-        }
+        }//while
 
         // If the TaskTracker is just starting up:
         // 1. Verify the buildVersion
@@ -1649,6 +1649,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
         now = System.currentTimeMillis();
         if (now > (lastCheckDirsTime + diskHealthCheckInterval)) {
+          ////need to check dirs.
           localStorage.checkDirs();
           lastCheckDirsTime = now;
           int numFailures = localStorage.numFailures();
@@ -1784,7 +1785,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    * @return false if the tracker was unknown
    * @throws IOException
    */
-  ////TODO in heartbeat, should contain ShuffleTask Status.
+  ////TODO transmitHeartBeat() and HeartbeatResponse, should contain ShuffleTask Status.
   HeartbeatResponse transmitHeartBeat(long now) throws IOException {
     // Send Counters in the status once every COUNTER_UPDATE_INTERVAL
     boolean sendCounters;
@@ -1828,6 +1829,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
          acceptNewTasks); 
       localMinSpaceStart = minSpaceStart;
     }
+    ////if askForNewTask, construct status.
     if (askForNewTask) {
       askForNewTask = enoughFreeSpace(localMinSpaceStart);
       long freeDiskSpace = getFreeSpace();
@@ -1869,6 +1871,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     //
     // Xmit the heartbeat
     //
+    ////InterTrackerProtocol jobClient.
     HeartbeatResponse heartbeatResponse = jobClient.heartbeat(status, 
                                                               justStarted,
                                                               justInited,
