@@ -84,10 +84,8 @@ public abstract class TaskStatus implements Writable, Cloneable {
   
   public TaskAttemptID getTaskID() { return taskid; }
   public abstract boolean getIsMap();
-  ////
-  public boolean getIsShuffle() {
-    return false;
-  };
+  ////TODO to implements this method.
+  public abstract boolean getIsShuffle();
   public int getNumSlots() {
     return numSlots;
   }
