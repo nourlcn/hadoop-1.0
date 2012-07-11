@@ -3377,6 +3377,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     // Process this heartbeat 
     short newResponseId = (short)(responseId + 1);
     status.setLastSeen(now);
+    
+    ////update tracker status and nodeHealth status.
     if (!processHeartbeat(status, initialContact, now)) {
       if (prevHeartbeatResponse != null) {
         trackerToHeartbeatResponseMap.remove(trackerName);
@@ -3390,13 +3392,17 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     List<TaskTrackerAction> actions = new ArrayList<TaskTrackerAction>();
     boolean isBlacklisted = faultyTrackers.isBlacklisted(status.getHost());
     // Check for new tasks to be executed on the tasktracker
+    //// if this tasktracker acceptNewTasks.
     if (recoveryManager.shouldSchedule() && acceptNewTasks && !isBlacklisted) {
       TaskTrackerStatus taskTrackerStatus = getTaskTrackerStatus(trackerName);
       if (taskTrackerStatus == null) {
         LOG.warn("Unknown task tracker polling; ignoring: " + trackerName);
       } else {
+        ////get cleanup task first, then setup task.
         List<Task> tasks = getSetupAndCleanupTasks(taskTrackerStatus);
         if (tasks == null ) {
+          ////@args: taskTracker
+          ////Very Important method!!!
           tasks = taskScheduler.assignTasks(taskTrackers.get(trackerName));
         }
         if (tasks != null) {
