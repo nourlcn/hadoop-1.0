@@ -2100,6 +2100,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
   RetireJobs retireJobs = new RetireJobs();
   Thread retireJobsThread = null;
   final int retiredJobsCacheSize;
+  ////tasks been assigned but not report yet.
   ExpireLaunchingTasks expireLaunchingTasks = new ExpireLaunchingTasks();
   Thread expireLaunchingTaskThread = new Thread(expireLaunchingTasks,
                                                 "expireLaunchingTasks");
@@ -3393,6 +3394,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
     boolean isBlacklisted = faultyTrackers.isBlacklisted(status.getHost());
     // Check for new tasks to be executed on the tasktracker
     //// if this tasktracker acceptNewTasks.
+    //// fill actions with LaunchTaskAction. Type is launch task.
     if (recoveryManager.shouldSchedule() && acceptNewTasks && !isBlacklisted) {
       TaskTrackerStatus taskTrackerStatus = getTaskTrackerStatus(trackerName);
       if (taskTrackerStatus == null) {
@@ -3407,6 +3409,8 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         }
         if (tasks != null) {
           for (Task task : tasks) {
+            ////expireLaunchingTasks
+            ////TODO if taskType is Shuffle, how to deal with it?
             expireLaunchingTasks.addNewTask(task.getTaskID());
             if(LOG.isDebugEnabled()) {
               LOG.debug(trackerName + " -> LaunchTask: " + task.getTaskID());
