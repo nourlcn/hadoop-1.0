@@ -1318,6 +1318,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     return localJobFile;
   }
 
+  ////Important
+  ////finally, launch TaskInProgress for Job
   protected void launchTaskForJob(TaskInProgress tip, JobConf jobConf,
                                 RunningJob rjob) throws IOException {
     synchronized (tip) {
@@ -1325,6 +1327,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
                   localStorage.getDirsString());
       tip.setJobConf(jobConf);
       tip.setUGI(rjob.ugi);
+      ////TODO IMPORTANT!!
+      ////split it into: launchShuffleTask and launchReduceTask.
       tip.launchTask(rjob);
     }
   }
@@ -1668,7 +1672,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         lastHeartbeat = System.currentTimeMillis();
         
         // Check if the map-event list needs purging
-        ////TODO  Dn't know what's the meaning of this paragraph.
+        ////TODO  Check is there any job need recover/rollback. if , then recover/rollback.
+        ////TODO  Important!! if shuffle is splited. how to rollback?
         Set<JobID> jobs = heartbeatResponse.getRecoveredJobs();
         if (jobs.size() > 0) {
           synchronized (this) {
@@ -1690,6 +1695,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
             }
 
             // Mark the reducers in shuffle for rollback
+            //// TODO must!! Shuffle rollback how to implements?!
             synchronized (shouldReset) {
               for (Map.Entry<TaskAttemptID, TaskInProgress> entry 
                    : runningTasks.entrySet()) {
@@ -1707,6 +1713,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
                     heartbeatResponse.getResponseId() + " and " + 
                     ((actions != null) ? actions.length : 0) + " actions");
         }
+        ////check need to reinit or not
         if (reinitTaskTracker(actions)) {
           return State.STALE;
         }
@@ -1721,7 +1728,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
               ////when to add task to tasklauncher?!
               addToTaskQueue((LaunchTaskAction)action);
             } else if (action instanceof CommitTaskAction) {
-              ////TODO  commit Action do what ?
+              ////TODO  commit Action: commit output of this task.
               CommitTaskAction commitAction = (CommitTaskAction)action;
               if (!commitResponses.contains(commitAction.getTaskID())) {
                 LOG.info("Received commit task action for " + 
@@ -1872,6 +1879,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     // Xmit the heartbeat
     //
     ////InterTrackerProtocol jobClient.
+    //// get response object which contain launchTaskAction and restart info and so on.
+    //// jobClient type is InterTrackerProtocol, jobTracker implements it.
     HeartbeatResponse heartbeatResponse = jobClient.heartbeat(status, 
                                                               justStarted,
                                                               justInited,
@@ -1881,7 +1890,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     //
     // The heartbeat got through successfully!
     //
-    heartbeatResponseId = heartbeatResponse.getResponseId();
+    heartbeatResponseId = heartbeatResponse.getResponseId();////if success, this id is older id+1
       
     synchronized (this) {
       for (TaskStatus taskStatus : status.getTaskReports()) {
@@ -2300,12 +2309,12 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     if (action.getTask().isMapTask()) {
       mapLauncher.addToTaskQueue(action);
     } else {
-      if (action.getTask().isShuffleTask()) {
-        // this is shuffle task.
-        shuffleLauncher.addToTaskQueue(action);
-      } else {
+//      if (action.getTask().isShuffleTask()) {
+//         //this is shuffle task.
+//        shuffleLauncher.addToTaskQueue(action);
+//      } else {
         reduceLauncher.addToTaskQueue(action);
-      }
+//      }
     }
   }
 
@@ -2328,7 +2337,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         TaskInProgress tip = registerTask(action, this);
         ////task to launch list
         tasksToLaunch.add(tip);
-        ////wake up thread to exec one task in tasksToLaunch.
+        //// wake up thread to exec one task in tasksToLaunch.
         //// TaskTracker.startNewTask() to run new task from tasksToLaunch.
         tasksToLaunch.notifyAll();
       }
@@ -2421,6 +2430,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
             tip.slotTaken = true;
           }
           //got a free slot. launch the task
+          //// Important Method. startNewTask.
           startNewTask(tip);
         } catch (InterruptedException e) { 
           return; // ALL DONE
