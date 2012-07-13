@@ -1180,6 +1180,10 @@ public class JobConf extends Configuration {
    */
   public int getNumReduceTasks() { return getInt("mapred.reduce.tasks", 1); }
   
+  ////add getNumShuffleTasks()
+  ////currently, the same as NumReduceTasks.
+  public int getNumShuffleTasks() { return getNumReduceTasks(); }
+  
   /**
    * Set the requisite number of reduce tasks for this job.
    * 
