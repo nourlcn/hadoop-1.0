@@ -399,7 +399,9 @@ class ReduceTask extends Task {
       }
     }
     
+    ////copy is finished and start next phase.
     copyPhase.complete();                         // copy is already complete
+    
     setPhase(TaskStatus.Phase.SORT);
     statusUpdate(umbilical);
 
@@ -1335,10 +1337,13 @@ class ReduceTask extends Task {
             CopyOutputErrorType error = CopyOutputErrorType.OTHER_ERROR;
             readError = false;
             try {
+              ////num of busyThread +1
               shuffleClientMetrics.threadBusy();
+              ////current location = loc
               start(loc);
               ////size: bytes of in-mem or ondisk data we have copied from map to reduce.
               size = copyOutput(loc);
+              ////success fetch num +1
               shuffleClientMetrics.successFetch();
               error = CopyOutputErrorType.NO_ERROR;
             } catch (IOException e) {
@@ -1405,6 +1410,7 @@ class ReduceTask extends Task {
         // Copy the map output to a temp file whose name is unique to this attempt 
         Path tmpMapOutput = new Path(filename+"-"+id);
         
+        ////Important method, getMapOutput from loc to tmpMapOutput.
         // Copy the map output
         MapOutput mapOutput = getMapOutput(loc, tmpMapOutput,
                                            reduceId.getTaskID().getId());
@@ -1479,6 +1485,8 @@ class ReduceTask extends Task {
         ramManager.setNumCopiedMapOutputs(numMaps - copiedMapOutputs.size());
       }
 
+      
+      ////Important!! get mapOutput from mapOutputLoc into filename.
       /**
        * Get the map output into a local file (either in the inmemory fs or on the 
        * local fs) from the remote server.
@@ -1551,6 +1559,7 @@ class ReduceTask extends Task {
         boolean shuffleInMemory = ramManager.canFitInMemory(decompressedLength); 
 
         // Shuffle
+        //// We do think, shuffle include copy phase and write data into memory or disk.
         MapOutput mapOutput = null;
         if (shuffleInMemory) {
           if (LOG.isDebugEnabled()) {
@@ -2435,6 +2444,7 @@ class ReduceTask extends Task {
       return totalSize;
     }
 
+    ////FUTURE: maybe merge could be started when copy is not finished.
     /**
      * Create a RawKeyValueIterator from copied map outputs. All copying
      * threads have exited, so all of the map outputs are available either in
@@ -2545,6 +2555,8 @@ class ReduceTask extends Task {
         finalSegments.add(new Segment<K,V>(
               new RawKVIteratorReader(diskMerge, onDiskBytes), true));
       }
+      
+      ////Now isLocal is TRUE and is local merge.
       return Merger.merge(job, fs, keyClass, valueClass,
                    finalSegments, finalSegments.size(), tmpDir,
                    comparator, reporter, spilledRecordsCounter, null);
