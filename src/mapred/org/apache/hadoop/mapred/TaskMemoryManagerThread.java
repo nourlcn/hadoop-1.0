@@ -78,6 +78,7 @@ class TaskMemoryManagerThread extends Thread {
     this.monitoringInterval = monitoringInterval;
   }
 
+  ////if task mem manager is enable, add task into taskMemoryManager.
   public void addTask(TaskAttemptID tid, long memLimit) {
     synchronized (tasksToBeAdded) {
       LOG.debug("Tracking ProcessTree " + tid + " for the first time");

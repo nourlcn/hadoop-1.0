@@ -322,6 +322,8 @@ class JvmManager {
       jvmIdToRunner.remove(jvmId);
       jvmIdToPid.remove(jvmId);
     }
+    
+    ////if reduceJvmManager,run reduce task runner on this JVM
     private synchronized void reapJvm( 
         TaskRunner t, JvmEnv env) throws IOException, InterruptedException {
       if (t.getTaskInProgress().wasKilled()) {
@@ -329,6 +331,7 @@ class JvmManager {
         //no need to do the rest of the operations
         return;
       }
+      ////generate new jvm.
       boolean spawnNewJvm = false;
       JobID jobId = t.getTask().getJobID();
       //Check whether there is a free slot to start a new JVM.
@@ -350,7 +353,10 @@ class JvmManager {
           JobID jId = jvmRunner.jvmId.getJobId();
           //look for a free JVM for this job; if one exists then just break
           if (jId.equals(jobId) && !jvmRunner.isBusy() && !jvmRunner.ranAll()){
+            //// reuse JVM.
+            ////Important!!
             setRunningTaskForJvm(jvmRunner.jvmId, t); //reserve the JVM
+            
             LOG.info("No new JVM spawned for jobId/taskid: " + 
                      jobId+"/"+t.getTask().getTaskID() +
                      ". Attempting to reuse: " + jvmRunner.jvmId);

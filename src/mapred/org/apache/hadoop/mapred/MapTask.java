@@ -678,6 +678,7 @@ class MapTask extends Task {
                        TaskReporter reporter
                        ) throws IOException, ClassNotFoundException {
       collector = new MapOutputBuffer<K,V>(umbilical, job, reporter);
+      ////TODO change getNumReduceTasks to getNumShuffleTasks.
       partitions = jobContext.getNumReduceTasks();
       if (partitions > 0) {
         partitioner = (org.apache.hadoop.mapreduce.Partitioner<K,V>)

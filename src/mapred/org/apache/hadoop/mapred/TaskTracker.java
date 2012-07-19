@@ -2480,6 +2480,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
           RunningJob rjob = localizeJob(tip);
           tip.getTask().setJobFile(rjob.getLocalizedJobConf().toString());
           // Localization is done. Neither rjob.jobConf nor rjob.ugi can be null
+          //// IMPORTANT!!
           launchTaskForJob(tip, new JobConf(rjob.getJobConf()), rjob); 
         } catch (Throwable e) {
           String msg = ("Error initializing " + tip.getTask().getTaskID() + 
@@ -2712,6 +2713,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     /**
      * Kick off the task execution
      */
+    ////Important, start task execution.
+    ////TaskInProgress.launchTask
     public synchronized void launchTask(RunningJob rjob) throws IOException {
       if (this.taskStatus.getRunState() == TaskStatus.State.UNASSIGNED ||
           this.taskStatus.getRunState() == TaskStatus.State.FAILED_UNCLEAN ||
@@ -2720,7 +2723,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         if (this.taskStatus.getRunState() == TaskStatus.State.UNASSIGNED) {
           this.taskStatus.setRunState(TaskStatus.State.RUNNING);
         }
+        ////args type: TaskRunner
         setTaskRunner(task.createRunner(TaskTracker.this, this, rjob));
+        ////IMPORTANT!! this.runner.start() call witch method? --> 
+        ////TaskRunner->start()
         this.runner.start();
         long now = System.currentTimeMillis();
         this.taskStatus.setStartTime(now);

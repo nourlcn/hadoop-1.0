@@ -183,6 +183,7 @@ abstract class TaskRunner extends Thread {
     return jobConf.get(JobConf.MAPRED_TASK_ENV);
   }
   
+  ////TaskRunner is a thread and its run() method:
   @Override
   public final void run() {
     String errorInfo = "Child Error";
@@ -248,7 +249,10 @@ abstract class TaskRunner extends Thread {
       }
       setupCmds.add(setup);
       
+      ////IMPORTANT. Launch Child JVM progress.!
+      ////!! I do not find run task, only generate new jvm or reuse free jvm.
       launchJvmAndWait(setupCmds, vargs, stdout, stderr, logSize, workDir);
+      
       tracker.getTaskTrackerInstrumentation().reportTaskEnd(t.getTaskID());
       if (exitCodeSet) {
         if (!killed && exitCode != 0) {
@@ -289,6 +293,7 @@ abstract class TaskRunner extends Thread {
   void launchJvmAndWait(List <String> setup, Vector<String> vargs, File stdout,
       File stderr, long logSize, File workDir)
       throws InterruptedException, IOException {
+    ////Child JVM.
     jvmManager.launchJvm(this, jvmManager.constructJvmEnv(setup, vargs, stdout,
         stderr, logSize, workDir, conf));
     synchronized (lock) {

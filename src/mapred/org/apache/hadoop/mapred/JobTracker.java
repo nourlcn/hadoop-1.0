@@ -3733,7 +3733,7 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
    */
   private synchronized List<TaskTrackerAction> getTasksToKill(
                                                               String taskTracker) {
-    
+    ////trackerToTaskMap: (trackerID->TreeSet of taskids running at that tracker)
     Set<TaskAttemptID> taskIds = trackerToTaskMap.get(taskTracker);
     List<TaskTrackerAction> killList = new ArrayList<TaskTrackerAction>();
     if (taskIds != null) {
