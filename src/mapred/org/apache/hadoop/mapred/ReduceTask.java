@@ -72,8 +72,10 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapred.IFile.*;
-import org.apache.hadoop.mapred.Merger.Segment;
+import org.apache.hadoop.mapred.task.reduce.InMemoryReader;
+import org.apache.hadoop.mapred.task.reduce.Shuffle;
 import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
+import org.apache.hadoop.mapred.Task.Counter;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.metrics2.MetricsBuilder;
@@ -128,6 +130,11 @@ class ReduceTask extends Task {
     getCounters().findCounter(Counter.REDUCE_OUTPUT_RECORDS);
   private Counters.Counter reduceCombineOutputCounter =
     getCounters().findCounter(Counter.COMBINE_OUTPUT_RECORDS);
+  
+  private Counters.Counter shuffledMapsCounter = getCounters().findCounter(
+      Counter.SHUFFLED_MAPS);
+  private Counters.Counter reduceCombineInputCounter = getCounters()
+      .findCounter(Counter.COMBINE_INPUT_RECORDS);
 
   // A custom comparator for map output files. Here the ordering is determined
   // by the file's size and path. In case of files with same size and different
@@ -293,12 +300,12 @@ class ReduceTask extends Task {
        mayBeSkip();
      }
      
-     void nextKey() throws IOException {
+     public void nextKey() throws IOException {
        super.nextKey();
        mayBeSkip();
      }
      
-     boolean more() { 
+     public boolean more() { 
        return super.more() && hasNext; 
      }
      
@@ -384,36 +391,69 @@ class ReduceTask extends Task {
     
     // Initialize the codec
     codec = initCodec();
-
-    ////TODO need to set debug button here. local or cluster environment.
-    boolean isLocal = "local".equals(job.get("mapred.job.tracker", "local"));
-    if (!isLocal) {
-      LOG.info("[ACT-HADOOP]!!!!! verify isLocal or not, wether via Copy Phase");
-      reduceCopier = new ReduceCopier(umbilical, job, reporter);
-      if (!reduceCopier.fetchOutputs()) {
-        if(reduceCopier.mergeThrowable instanceof FSError) {
-          throw (FSError)reduceCopier.mergeThrowable;
-        }
-        throw new IOException("Task: " + getTaskID() + 
-            " - The reduce copier failed", reduceCopier.mergeThrowable);
-      }
-    }
+//
+//    boolean isLocal = "local".equals(job.get("mapred.job.tracker", "local"));
+//    if (!isLocal) {
+//      reduceCopier = new ReduceCopier(umbilical, job, reporter);
+//      if (!reduceCopier.fetchOutputs()) {
+//        if (reduceCopier.mergeThrowable instanceof FSError) {
+//          throw (FSError) reduceCopier.mergeThrowable;
+//        }
+//        throw new IOException("Task: " + getTaskID()
+//            + " - The reduce copier failed", reduceCopier.mergeThrowable);
+//      }
+//    }
+//    copyPhase.complete(); // copy is already complete
+//    setPhase(TaskStatus.Phase.SORT);
+//    statusUpdate(umbilical);
+//
+//    final FileSystem rfs = FileSystem.getLocal(job).getRaw();
     
-    ////copy is finished and start next phase.
-    copyPhase.complete();                         // copy is already complete
+//    RawKeyValueIterator rIter = isLocal ? Merger.merge(job, rfs,
+//        job.getMapOutputKeyClass(), job.getMapOutputValueClass(), codec,
+//        getMapFiles(rfs, true), !conf.getKeepFailedTaskFiles(),
+//        job.getInt("io.sort.factor", 100), new Path(getTaskID().toString()),
+//        job.getOutputKeyComparator(), reporter, spilledRecordsCounter, null)
+//        : reduceCopier.createKVIterator(job, rfs, reporter);    
     
-    setPhase(TaskStatus.Phase.SORT);
-    statusUpdate(umbilical);
-
     final FileSystem rfs = FileSystem.getLocal(job).getRaw();
-    RawKeyValueIterator rIter = isLocal
-      ? Merger.merge(job, rfs, job.getMapOutputKeyClass(),
+    RawKeyValueIterator rIter = null;
+    boolean isLocal = "local".equals(job.get("mapred.job.tracker", "local"));
+    
+    if (!isLocal) {
+      Class combinerClass = conf.getCombinerClass();
+      CombineOutputCollector combineCollector = (null != combinerClass) ? new CombineOutputCollector(
+          reduceCombineOutputCounter, reporter, conf) : null;
+
+      final Shuffle shuffle = new Shuffle(getTaskID(), job,
+          FileSystem.getLocal(job), umbilical, super.lDirAlloc, reporter,
+          codec, combinerClass, combineCollector, spilledRecordsCounter,
+          reduceCombineInputCounter, shuffledMapsCounter, reduceShuffleBytes,
+          failedShuffleCounter, mergedMapOutputsCounter, taskStatus, copyPhase,
+          sortPhase, this, mapOutputFile, jvmContext);
+      
+      rIter = shuffle.run();
+    } else {
+      // local job runner doesn't have a copy phase
+      copyPhase.complete();
+      setPhase(TaskStatus.Phase.SORT);
+      statusUpdate(umbilical);
+      
+      ////Type define:
+//    <?, ?> RawKeyValueIterator org.apache.hadoop.mapred.Merger.merge(Configuration conf, FileSystem fs, 
+//        Class<?> keyClass, Class<?> valueClass, CompressionCodec codec, 
+//        Path[] inputs, boolean deleteInputs, 
+//        int mergeFactor, Path tmpDir, 
+//        RawComparator<?> comparator, Progressable reporter, Counter readsCounter, Counter writesCounter);
+
+      rIter = Merger.merge(job, rfs, job.getMapOutputKeyClass(),
           job.getMapOutputValueClass(), codec, getMapFiles(rfs, true),
           !conf.getKeepFailedTaskFiles(), job.getInt("io.sort.factor", 100),
           new Path(getTaskID().toString()), job.getOutputKeyComparator(),
-          reporter, spilledRecordsCounter, null)
-      : reduceCopier.createKVIterator(job, rfs, reporter);
-        
+          reporter, spilledRecordsCounter, null, null);
+    }
+    
+    
     // free up the data structures
     mapOutputFilesOnDisk.clear();
     
@@ -2416,33 +2456,32 @@ class ReduceTask extends Task {
       }
     }
 
-
-
-    private long createInMemorySegments(
-        List<Segment<K, V>> inMemorySegments, long leaveBytes)
-        throws IOException {
-      long totalSize = 0L;
-      synchronized (mapOutputsFilesInMemory) {
-        // fullSize could come from the RamManager, but files can be
-        // closed but not yet present in mapOutputsFilesInMemory
-        long fullSize = 0L;
-        for (MapOutput mo : mapOutputsFilesInMemory) {
-          fullSize += mo.data.length;
-        }
-        while(fullSize > leaveBytes) {
-          MapOutput mo = mapOutputsFilesInMemory.remove(0);
-          totalSize += mo.data.length;
-          fullSize -= mo.data.length;
-          Reader<K, V> reader = 
-            new InMemoryReader<K, V>(ramManager, mo.mapAttemptId,
-                                     mo.data, 0, mo.data.length);
-          Segment<K, V> segment = 
-            new Segment<K, V>(reader, true);
-          inMemorySegments.add(segment);
-        }
-      }
-      return totalSize;
-    }
+    ////may be not use again.  by @nourlcn
+//    private long createInMemorySegments(
+//        List<Segment<K, V>> inMemorySegments, long leaveBytes)
+//        throws IOException {
+//      long totalSize = 0L;
+//      synchronized (mapOutputsFilesInMemory) {
+//        // fullSize could come from the RamManager, but files can be
+//        // closed but not yet present in mapOutputsFilesInMemory
+//        long fullSize = 0L;
+//        for (MapOutput mo : mapOutputsFilesInMemory) {
+//          fullSize += mo.data.length;
+//        }
+//        while(fullSize > leaveBytes) {
+//          MapOutput mo = mapOutputsFilesInMemory.remove(0);
+//          totalSize += mo.data.length;
+//          fullSize -= mo.data.length;
+//          Reader<K, V> reader =
+//            new InMemoryReader<K, V>(ramManager, mo.mapAttemptId,
+//                                     mo.data, 0, mo.data.length);
+//          Segment<K, V> segment = 
+//            new Segment<K, V>(reader, true);
+//          inMemorySegments.add(segment);
+//        }
+//      }
+//      return totalSize;
+//    }
 
     ////FUTURE: maybe merge could be started when copy is not finished.
     /**
@@ -2461,106 +2500,108 @@ class ReduceTask extends Task {
      * first merge pass. If not, then said outputs must be written to disk
      * first.
      */
-    @SuppressWarnings("unchecked")
-    private RawKeyValueIterator createKVIterator(
-        JobConf job, FileSystem fs, Reporter reporter) throws IOException {
-
-      // merge config params
-      Class<K> keyClass = (Class<K>)job.getMapOutputKeyClass();
-      Class<V> valueClass = (Class<V>)job.getMapOutputValueClass();
-      boolean keepInputs = job.getKeepFailedTaskFiles();
-      final Path tmpDir = new Path(getTaskID().toString());
-      final RawComparator<K> comparator =
-        (RawComparator<K>)job.getOutputKeyComparator();
-
-      // segments required to vacate memory
-      List<Segment<K,V>> memDiskSegments = new ArrayList<Segment<K,V>>();
-      long inMemToDiskBytes = 0;
-      if (mapOutputsFilesInMemory.size() > 0) {
-        TaskID mapId = mapOutputsFilesInMemory.get(0).mapId;
-        inMemToDiskBytes = createInMemorySegments(memDiskSegments,
-            maxInMemReduce);
-        final int numMemDiskSegments = memDiskSegments.size();
-        if (numMemDiskSegments > 0 &&
-              ioSortFactor > mapOutputFilesOnDisk.size()) {
-          // must spill to disk, but can't retain in-mem for intermediate merge
-          final Path outputPath =
-              mapOutputFile.getInputFileForWrite(mapId, inMemToDiskBytes);
-          final RawKeyValueIterator rIter = Merger.merge(job, fs,
-              keyClass, valueClass, memDiskSegments, numMemDiskSegments,
-              tmpDir, comparator, reporter, spilledRecordsCounter, null);
-          final Writer writer = new Writer(job, fs, outputPath,
-              keyClass, valueClass, codec, null);
-          try {
-            Merger.writeFile(rIter, writer, reporter, job);
-            addToMapOutputFilesOnDisk(fs.getFileStatus(outputPath));
-          } catch (Exception e) {
-            if (null != outputPath) {
-              fs.delete(outputPath, true);
-            }
-            throw new IOException("Final merge failed", e);
-          } finally {
-            if (null != writer) {
-              writer.close();
-            }
-          }
-          LOG.info("Merged " + numMemDiskSegments + " segments, " +
-                   inMemToDiskBytes + " bytes to disk to satisfy " +
-                   "reduce memory limit");
-          inMemToDiskBytes = 0;
-          memDiskSegments.clear();
-        } else if (inMemToDiskBytes != 0) {
-          LOG.info("Keeping " + numMemDiskSegments + " segments, " +
-                   inMemToDiskBytes + " bytes in memory for " +
-                   "intermediate, on-disk merge");
-        }
-      }
-
-      // segments on disk
-      List<Segment<K,V>> diskSegments = new ArrayList<Segment<K,V>>();
-      long onDiskBytes = inMemToDiskBytes;
-      Path[] onDisk = getMapFiles(fs, false);
-      for (Path file : onDisk) {
-        onDiskBytes += fs.getFileStatus(file).getLen();
-        diskSegments.add(new Segment<K, V>(job, fs, file, codec, keepInputs));
-      }
-      LOG.info("Merging " + onDisk.length + " files, " +
-               onDiskBytes + " bytes from disk");
-      Collections.sort(diskSegments, new Comparator<Segment<K,V>>() {
-        public int compare(Segment<K, V> o1, Segment<K, V> o2) {
-          if (o1.getLength() == o2.getLength()) {
-            return 0;
-          }
-          return o1.getLength() < o2.getLength() ? -1 : 1;
-        }
-      });
-
-      // build final list of segments from merged backed by disk + in-mem
-      List<Segment<K,V>> finalSegments = new ArrayList<Segment<K,V>>();
-      long inMemBytes = createInMemorySegments(finalSegments, 0);
-      LOG.info("Merging " + finalSegments.size() + " segments, " +
-               inMemBytes + " bytes from memory into reduce");
-      if (0 != onDiskBytes) {
-        final int numInMemSegments = memDiskSegments.size();
-        diskSegments.addAll(0, memDiskSegments);
-        memDiskSegments.clear();
-        RawKeyValueIterator diskMerge = Merger.merge(
-            job, fs, keyClass, valueClass, codec, diskSegments,
-            ioSortFactor, numInMemSegments, tmpDir, comparator,
-            reporter, false, spilledRecordsCounter, null);
-        diskSegments.clear();
-        if (0 == finalSegments.size()) {
-          return diskMerge;
-        }
-        finalSegments.add(new Segment<K,V>(
-              new RawKVIteratorReader(diskMerge, onDiskBytes), true));
-      }
-      
-      ////Now isLocal is TRUE and is local merge.
-      return Merger.merge(job, fs, keyClass, valueClass,
-                   finalSegments, finalSegments.size(), tmpDir,
-                   comparator, reporter, spilledRecordsCounter, null);
-    }
+    
+    ////may be not use again. by @nourlcn
+//    @SuppressWarnings("unchecked")
+//    private RawKeyValueIterator createKVIterator(
+//        JobConf job, FileSystem fs, Reporter reporter) throws IOException {
+//
+//      // merge config params
+//      Class<K> keyClass = (Class<K>)job.getMapOutputKeyClass();
+//      Class<V> valueClass = (Class<V>)job.getMapOutputValueClass();
+//      boolean keepInputs = job.getKeepFailedTaskFiles();
+//      final Path tmpDir = new Path(getTaskID().toString());
+//      final RawComparator<K> comparator =
+//        (RawComparator<K>)job.getOutputKeyComparator();
+//
+//      // segments required to vacate memory
+//      List<Segment<K,V>> memDiskSegments = new ArrayList<Segment<K,V>>();
+//      long inMemToDiskBytes = 0;
+//      if (mapOutputsFilesInMemory.size() > 0) {
+//        TaskID mapId = mapOutputsFilesInMemory.get(0).mapId;
+//        inMemToDiskBytes = createInMemorySegments(memDiskSegments,
+//            maxInMemReduce);
+//        final int numMemDiskSegments = memDiskSegments.size();
+//        if (numMemDiskSegments > 0 &&
+//              ioSortFactor > mapOutputFilesOnDisk.size()) {
+//          // must spill to disk, but can't retain in-mem for intermediate merge
+//          final Path outputPath =
+//              mapOutputFile.getInputFileForWrite(mapId, inMemToDiskBytes);
+//          final RawKeyValueIterator rIter = Merger.merge(job, fs,
+//              keyClass, valueClass, memDiskSegments, numMemDiskSegments,
+//              tmpDir, comparator, reporter, spilledRecordsCounter, null);
+//          final Writer writer = new Writer(job, fs, outputPath,
+//              keyClass, valueClass, codec, null);
+//          try {
+//            Merger.writeFile(rIter, writer, reporter, job);
+//            addToMapOutputFilesOnDisk(fs.getFileStatus(outputPath));
+//          } catch (Exception e) {
+//            if (null != outputPath) {
+//              fs.delete(outputPath, true);
+//            }
+//            throw new IOException("Final merge failed", e);
+//          } finally {
+//            if (null != writer) {
+//              writer.close();
+//            }
+//          }
+//          LOG.info("Merged " + numMemDiskSegments + " segments, " +
+//                   inMemToDiskBytes + " bytes to disk to satisfy " +
+//                   "reduce memory limit");
+//          inMemToDiskBytes = 0;
+//          memDiskSegments.clear();
+//        } else if (inMemToDiskBytes != 0) {
+//          LOG.info("Keeping " + numMemDiskSegments + " segments, " +
+//                   inMemToDiskBytes + " bytes in memory for " +
+//                   "intermediate, on-disk merge");
+//        }
+//      }
+//
+//      // segments on disk
+//      List<Segment<K,V>> diskSegments = new ArrayList<Segment<K,V>>();
+//      long onDiskBytes = inMemToDiskBytes;
+//      Path[] onDisk = getMapFiles(fs, false);
+//      for (Path file : onDisk) {
+//        onDiskBytes += fs.getFileStatus(file).getLen();
+//        diskSegments.add(new Segment<K, V>(job, fs, file, codec, keepInputs));
+//      }
+//      LOG.info("Merging " + onDisk.length + " files, " +
+//               onDiskBytes + " bytes from disk");
+//      Collections.sort(diskSegments, new Comparator<Segment<K,V>>() {
+//        public int compare(Segment<K, V> o1, Segment<K, V> o2) {
+//          if (o1.getLength() == o2.getLength()) {
+//            return 0;
+//          }
+//          return o1.getLength() < o2.getLength() ? -1 : 1;
+//        }
+//      });
+//
+//      // build final list of segments from merged backed by disk + in-mem
+//      List<Segment<K,V>> finalSegments = new ArrayList<Segment<K,V>>();
+//      long inMemBytes = createInMemorySegments(finalSegments, 0);
+//      LOG.info("Merging " + finalSegments.size() + " segments, " +
+//               inMemBytes + " bytes from memory into reduce");
+//      if (0 != onDiskBytes) {
+//        final int numInMemSegments = memDiskSegments.size();
+//        diskSegments.addAll(0, memDiskSegments);
+//        memDiskSegments.clear();
+//        RawKeyValueIterator diskMerge = Merger.merge(
+//            job, fs, keyClass, valueClass, codec, diskSegments,
+//            ioSortFactor, numInMemSegments, tmpDir, comparator,
+//            reporter, false, spilledRecordsCounter, null);
+//        diskSegments.clear();
+//        if (0 == finalSegments.size()) {
+//          return diskMerge;
+//        }
+//        finalSegments.add(new Segment<K,V>(
+//              new RawKVIteratorReader(diskMerge, onDiskBytes), true));
+//      }
+//      
+//      ////Now isLocal is TRUE and is local merge.
+//      return Merger.merge(job, fs, keyClass, valueClass,
+//                   finalSegments, finalSegments.size(), tmpDir,
+//                   comparator, reporter, spilledRecordsCounter, null);
+//    }
 
     class RawKVIteratorReader extends IFile.Reader<K,V> {
 
@@ -2700,7 +2741,12 @@ class ReduceTask extends Task {
                                   codec, mapFiles.toArray(new Path[mapFiles.size()]), 
                                   true, ioSortFactor, tmpDir, 
                                   conf.getOutputKeyComparator(), reporter,
-                                  spilledRecordsCounter, null);
+                                  spilledRecordsCounter, null, null);
+//              iter = Merger.merge(conf, rfs, conf.getMapOutputKeyClass(),
+//                  conf.getMapOutputValueClass(), codec,
+//                  mapFiles.toArray(new Path[mapFiles.size()]), true,
+//                  ioSortFactor, tmpDir, conf.getOutputKeyComparator(),
+//                  reporter, spilledRecordsCounter, null);
               
               Merger.writeFile(iter, writer, reporter, conf);
               writer.close();
@@ -2742,98 +2788,105 @@ class ReduceTask extends Task {
         setDaemon(true);
       }
       
-      public void run() {
-        LOG.info(reduceTask.getTaskID() + " Thread started: " + getName());
-        try {
-          boolean exit = false;
-          do {
-            exit = ramManager.waitForDataToMerge();
-            if (!exit) {
-              doInMemMerge();
-            }
-          } while (!exit);
-        } catch (Exception e) {
-          LOG.warn(reduceTask.getTaskID() +
-                   " Merge of the inmemory files threw an exception: "
-                   + StringUtils.stringifyException(e));
-          ReduceCopier.this.mergeThrowable = e;
-        } catch (Throwable t) {
-          String msg = getTaskID() + " : Failed to merge in memory" 
-                       + StringUtils.stringifyException(t);
-          reportFatalError(getTaskID(), t, msg);
-        }
-      }
+      ////may be not use again. by @nourlcn
+//      public void run() {
+//        LOG.info(reduceTask.getTaskID() + " Thread started: " + getName());
+//        try {
+//          boolean exit = false;
+//          do {
+//            exit = ramManager.waitForDataToMerge();
+//            if (!exit) {
+//              doInMemMerge();
+//            }
+//          } while (!exit);
+//        } catch (Exception e) {
+//          LOG.warn(reduceTask.getTaskID() +
+//                   " Merge of the inmemory files threw an exception: "
+//                   + StringUtils.stringifyException(e));
+//          ReduceCopier.this.mergeThrowable = e;
+//        } catch (Throwable t) {
+//          String msg = getTaskID() + " : Failed to merge in memory" 
+//                       + StringUtils.stringifyException(t);
+//          reportFatalError(getTaskID(), t, msg);
+//        }
+//      }
       
-      @SuppressWarnings("unchecked")
-      private void doInMemMerge() throws IOException{
-        if (mapOutputsFilesInMemory.size() == 0) {
-          return;
-        }
-        
-        //name this output file same as the name of the first file that is 
-        //there in the current list of inmem files (this is guaranteed to
-        //be absent on the disk currently. So we don't overwrite a prev. 
-        //created spill). Also we need to create the output file now since
-        //it is not guaranteed that this file will be present after merge
-        //is called (we delete empty files as soon as we see them
-        //in the merge method)
-
-        //figure out the mapId 
-        TaskID mapId = mapOutputsFilesInMemory.get(0).mapId;
-
-        List<Segment<K, V>> inMemorySegments = new ArrayList<Segment<K,V>>();
-        long mergeOutputSize = createInMemorySegments(inMemorySegments, 0);
-        int noInMemorySegments = inMemorySegments.size();
-
-        Path outputPath =
-            mapOutputFile.getInputFileForWrite(mapId, mergeOutputSize);
-
-        Writer writer = 
-          new Writer(conf, rfs, outputPath,
-                     conf.getMapOutputKeyClass(),
-                     conf.getMapOutputValueClass(),
-                     codec, null);
-
-        RawKeyValueIterator rIter = null;
-        try {
-          LOG.info("Initiating in-memory merge with " + noInMemorySegments + 
-                   " segments...");
-          
-          rIter = Merger.merge(conf, rfs,
-                               (Class<K>)conf.getMapOutputKeyClass(),
-                               (Class<V>)conf.getMapOutputValueClass(),
-                               inMemorySegments, inMemorySegments.size(),
-                               new Path(reduceTask.getTaskID().toString()),
-                               conf.getOutputKeyComparator(), reporter,
-                               spilledRecordsCounter, null);
-          
-          if (combinerRunner == null) {
-            Merger.writeFile(rIter, writer, reporter, conf);
-          } else {
-            combineCollector.setWriter(writer);
-            combinerRunner.combine(rIter, combineCollector);
-          }
-          writer.close();
-
-          LOG.info(reduceTask.getTaskID() + 
-              " Merge of the " + noInMemorySegments +
-              " files in-memory complete." +
-              " Local file is " + outputPath + " of size " + 
-              localFileSys.getFileStatus(outputPath).getLen());
-        } catch (Exception e) { 
-          //make sure that we delete the ondisk file that we created 
-          //earlier when we invoked cloneFileAttributes
-          localFileSys.delete(outputPath, true);
-          throw (IOException)new IOException
-                  ("Intermediate merge failed").initCause(e);
-        }
-
-        // Note the output of the merge
-        FileStatus status = localFileSys.getFileStatus(outputPath);
-        synchronized (mapOutputFilesOnDisk) {
-          addToMapOutputFilesOnDisk(status);
-        }
-      }
+      ////may be not use again.
+//      @SuppressWarnings("unchecked")
+//      private void doInMemMerge() throws IOException{
+//        if (mapOutputsFilesInMemory.size() == 0) {
+//          return;
+//        }
+//        
+//        //name this output file same as the name of the first file that is 
+//        //there in the current list of inmem files (this is guaranteed to
+//        //be absent on the disk currently. So we don't overwrite a prev. 
+//        //created spill). Also we need to create the output file now since
+//        //it is not guaranteed that this file will be present after merge
+//        //is called (we delete empty files as soon as we see them
+//        //in the merge method)
+//
+//        //figure out the mapId 
+//        TaskID mapId = mapOutputsFilesInMemory.get(0).mapId;
+//
+//        List<Segment<K, V>> inMemorySegments = new ArrayList<Segment<K,V>>();
+//        long mergeOutputSize = createInMemorySegments(inMemorySegments, 0);
+//        int noInMemorySegments = inMemorySegments.size();
+//
+//        Path outputPath =
+//            mapOutputFile.getInputFileForWrite(mapId, mergeOutputSize);
+//
+//        Writer writer = 
+//          new Writer(conf, rfs, outputPath,
+//                     conf.getMapOutputKeyClass(),
+//                     conf.getMapOutputValueClass(),
+//                     codec, null);
+//
+//        RawKeyValueIterator rIter = null;
+//        try {
+//          LOG.info("Initiating in-memory merge with " + noInMemorySegments + 
+//                   " segments...");
+//
+//          rIter = Merger.merge(conf, rfs, (Class<K>) conf
+//              .getMapOutputKeyClass(),
+//              (Class<V>) conf.getMapOutputValueClass(), inMemorySegments,
+//              inMemorySegments.size(), new Path(reduceTask.getTaskID()
+//                  .toString()), conf.getOutputKeyComparator(), reporter,false, 
+//              spilledRecordsCounter, null, null);
+////          rIter = Merger.merge(conf, rfs, (Class<K>) conf
+////              .getMapOutputKeyClass(),
+////              (Class<V>) conf.getMapOutputValueClass(), inMemorySegments,
+////              inMemorySegments.size(), new Path(reduceTask.getTaskID()
+////                  .toString()), conf.getOutputKeyComparator(), reporter,
+////              spilledRecordsCounter, null);
+//          
+//          if (combinerRunner == null) {
+//            Merger.writeFile(rIter, writer, reporter, conf);
+//          } else {
+//            combineCollector.setWriter(writer);
+//            combinerRunner.combine(rIter, combineCollector);
+//          }
+//          writer.close();
+//
+//          LOG.info(reduceTask.getTaskID() + 
+//              " Merge of the " + noInMemorySegments +
+//              " files in-memory complete." +
+//              " Local file is " + outputPath + " of size " + 
+//              localFileSys.getFileStatus(outputPath).getLen());
+//        } catch (Exception e) { 
+//          //make sure that we delete the ondisk file that we created 
+//          //earlier when we invoked cloneFileAttributes
+//          localFileSys.delete(outputPath, true);
+//          throw (IOException)new IOException
+//                  ("Intermediate merge failed").initCause(e);
+//        }
+//
+//        // Note the output of the merge
+//        FileStatus status = localFileSys.getFileStatus(outputPath);
+//        synchronized (mapOutputFilesOnDisk) {
+//          addToMapOutputFilesOnDisk(status);
+//        }
+//      }
     }
 
     private class GetMapEventsThread extends Thread {

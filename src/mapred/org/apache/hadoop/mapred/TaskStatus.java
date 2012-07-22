@@ -223,7 +223,7 @@ public abstract class TaskStatus implements Writable, Cloneable {
    * Set current phase of this task.  
    * @param phase phase of this task
    */
-  void setPhase(Phase phase){
+  public void setPhase(Phase phase){
     TaskStatus.Phase oldPhase = getPhase();
     if (oldPhase != phase){
       // sort phase started
@@ -293,7 +293,7 @@ public abstract class TaskStatus implements Writable, Cloneable {
    *  
    * @param mapTaskId map from which fetch failed
    */
-  synchronized void addFetchFailedMap(TaskAttemptID mapTaskId) {}
+  public synchronized void addFetchFailedMap(TaskAttemptID mapTaskId) {}
 
   /**
    * Update the status of the task.

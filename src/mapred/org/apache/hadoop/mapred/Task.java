@@ -56,7 +56,6 @@ import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.ResourceCalculatorPlugin;
 import org.apache.hadoop.util.ResourceCalculatorPlugin.ProcResourceValues;
 import org.apache.hadoop.util.StringUtils;
-import org.apache.hadoop.fs.FSDataInputStream;
 
 /** 
  * Base class for tasks.
@@ -68,6 +67,9 @@ abstract public class Task implements Writable, Configurable {
     LogFactory.getLog(Task.class);
   public static final String MR_COMBINE_RECORDS_BEFORE_PROGRESS = "mapred.combine.recordsBeforeProgress";
   public static final long DEFAULT_MR_COMBINE_RECORDS_BEFORE_PROGRESS = 10000;
+  
+  ////
+  public static String MERGED_OUTPUT_PREFIX = ".merged";
 
   // Counters used by Task subclasses
   public static enum Counter { 
@@ -77,6 +79,7 @@ abstract public class Task implements Writable, Configurable {
     MAP_INPUT_BYTES, 
     MAP_OUTPUT_BYTES,
     MAP_OUTPUT_MATERIALIZED_BYTES,
+    SHUFFLED_MAPS,
     COMBINE_INPUT_RECORDS,
     COMBINE_OUTPUT_RECORDS,
     REDUCE_INPUT_GROUPS,
@@ -87,6 +90,8 @@ abstract public class Task implements Writable, Configurable {
     REDUCE_SKIPPED_RECORDS,
     SPILLED_RECORDS,
     SPLIT_RAW_BYTES,
+    FAILED_SHUFFLE,
+    MERGED_MAP_OUTPUTS,
     CPU_MILLISECONDS,
     PHYSICAL_MEMORY_BYTES,
     VIRTUAL_MEMORY_BYTES,
@@ -166,6 +171,10 @@ abstract public class Task implements Writable, Configurable {
   protected SecretKey tokenSecret;
   protected JvmContext jvmContext;
 
+  protected final Counters.Counter failedShuffleCounter;
+  protected final Counters.Counter mergedMapOutputsCounter;
+
+  
   ////////////////////////////////////////////
   // Constructors
   ////////////////////////////////////////////
@@ -174,6 +183,10 @@ abstract public class Task implements Writable, Configurable {
     taskStatus = TaskStatus.createTaskStatus(isMapTask());
     taskId = new TaskAttemptID();
     spilledRecordsCounter = counters.findCounter(Counter.SPILLED_RECORDS);
+    
+    ////
+    failedShuffleCounter = counters.findCounter(Counter.FAILED_SHUFFLE);
+    mergedMapOutputsCounter = counters.findCounter(Counter.MERGED_MAP_OUTPUTS);
   }
 
   public Task(String jobFile, TaskAttemptID taskId, int partition, 
@@ -192,6 +205,10 @@ abstract public class Task implements Writable, Configurable {
                                                     TaskStatus.Phase.SHUFFLE, 
                                                   counters);
     spilledRecordsCounter = counters.findCounter(Counter.SPILLED_RECORDS);
+    
+    ////
+    failedShuffleCounter = counters.findCounter(Counter.FAILED_SHUFFLE);
+    mergedMapOutputsCounter = counters.findCounter(Counter.MERGED_MAP_OUTPUTS);
   }
 
   ////////////////////////////////////////////
@@ -894,7 +911,7 @@ abstract public class Task implements Writable, Configurable {
     return commitRequired;
   }
 
-  protected void statusUpdate(TaskUmbilicalProtocol umbilical) 
+  public void statusUpdate(TaskUmbilicalProtocol umbilical) 
   throws IOException {
     int retries = MAX_RETRIES;
     while (true) {
@@ -1135,7 +1152,7 @@ abstract public class Task implements Writable, Configurable {
   /**
    * OutputCollector for the combiner.
    */
-  protected static class CombineOutputCollector<K extends Object, V extends Object> 
+  public static class CombineOutputCollector<K extends Object, V extends Object> 
   implements OutputCollector<K, V> {
     private Writer<K, V> writer;
     private Counters.Counter outCounter;
@@ -1223,7 +1240,7 @@ abstract public class Task implements Writable, Configurable {
     /// Auxiliary methods
 
     /** Start processing next unique key. */
-    void nextKey() throws IOException {
+    public void nextKey() throws IOException {
       // read until we find a new key
       while (hasNext) { 
         readNextKey();
@@ -1238,12 +1255,12 @@ abstract public class Task implements Writable, Configurable {
     }
 
     /** True iff more keys remain. */
-    boolean more() { 
+    public boolean more() { 
       return more; 
     }
 
     /** The current key. */
-    KEY getKey() { 
+    public KEY getKey() { 
       return key; 
     }
 
@@ -1273,7 +1290,7 @@ abstract public class Task implements Writable, Configurable {
     }
   }
 
-  protected static class CombineValuesIterator<KEY,VALUE>
+  public static class CombineValuesIterator<KEY,VALUE>
       extends ValuesIterator<KEY,VALUE> {
 
     private final Counters.Counter combineInputCounter;

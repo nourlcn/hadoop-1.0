@@ -27,7 +27,7 @@ import org.apache.hadoop.io.Writable;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
-class JvmContext implements Writable {
+public class JvmContext implements Writable {
 
   public static final Log LOG =
     LogFactory.getLog(JvmContext.class);

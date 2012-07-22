@@ -343,7 +343,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   // Track number of completed tasks to send an out-of-band heartbeat
   private AtomicInteger finishedCount = new AtomicInteger(0);
   
+  ////this used for fetch map events, for example: map-completion event.
   private MapEventsFetcherThread mapEventsFetcher;
+  
   final int workerThreads;
   CleanupQueue directoryCleanupThread;
   private volatile JvmManager jvmManager;
@@ -954,8 +956,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
                 fList.add(f);
                 break; //no need to check any more tasks belonging to this
               }
-            }
-          }
+            }//if (!task.isMapTask()) 
+          }//for (TaskInProgress tip : rjob.tasks)
         }
       }
       //at this point, we have information about for which of
@@ -3659,8 +3661,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     //the 'localizing' and 'localized' fields have the following
     //state transitions (first entry is for 'localizing')
     //{false,false} -> {true,false} -> {false,true}
+    
+    ////TODO ?? What's the meaning of these two args ?
     volatile boolean localized;
     boolean localizing;
+    
     boolean keepJobFiles;
     UserGroupInformation ugi;
     FetchStatus f;

@@ -33,7 +33,7 @@ import org.apache.hadoop.fs.Path;
  * taskTracker/jobCache/jobId/attemptId
  * This class should not be used from TaskTracker space.
  */ 
-class MapOutputFile {
+public class MapOutputFile {
 
   private JobConf conf;
 

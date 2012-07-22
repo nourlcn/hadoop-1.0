@@ -164,6 +164,7 @@ public interface TaskUmbilicalProtocol extends VersionedProtocol {
    * @param id The attempt id of the task that is trying to communicate
    * @return A {@link MapTaskCompletionEventsUpdate} 
    */
+  //// we could use this method to get map completion events.
   MapTaskCompletionEventsUpdate getMapCompletionEvents(JobID jobId, 
                                                        int fromIndex, 
                                                        int maxLocs,
