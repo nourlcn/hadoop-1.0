@@ -518,18 +518,18 @@ public class TaskTrackerStatus implements Writable {
   
 
   ////
-
   /**
    * Get the number of running reduce tasks.
    * @return the number of running reduce tasks
    */
   public int countShuffleTasks() {
     int shuffleCount = 0;
-    for (TaskStatus ts : taskReports) {
-      if (ts.getIsShuffle() && isTaskRunning(ts)) {
-        shuffleCount++;
-      }
-    }
+    ////not use now, by @nourlcn
+//    for (TaskStatus ts : taskReports) {
+//      if (ts.getIsShuffle() && isTaskRunning(ts)) {
+//        shuffleCount++;
+//      }
+//    }
     return shuffleCount;
   }
 
@@ -539,11 +539,12 @@ public class TaskTrackerStatus implements Writable {
    */
   public int countOccupiedShuffleSlots() {
     int shuffleSlotsCount = 0;
-    for (TaskStatus ts : taskReports) {
-      if (ts.getIsShuffle() && isTaskRunning(ts)) {
-        shuffleSlotsCount += ts.getNumSlots();
-      }
-    }
+    ////not use now, by @nourlcn
+//    for (TaskStatus ts : taskReports) {
+//      if (ts.getIsShuffle() && isTaskRunning(ts)) {
+//        shuffleSlotsCount += ts.getNumSlots();
+//      }
+//    }
     return shuffleSlotsCount;
   }
   

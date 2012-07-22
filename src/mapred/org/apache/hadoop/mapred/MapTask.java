@@ -60,7 +60,10 @@ import org.apache.hadoop.io.serializer.Deserializer;
 import org.apache.hadoop.io.serializer.SerializationFactory;
 import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapred.IFile.Writer;
-import org.apache.hadoop.mapred.Merger.Segment;
+
+//import org.apache.hadoop.mapred.Merger.Segment;
+import org.apache.hadoop.mapred.Segment; //split Segment by @nourlcn
+
 import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapreduce.split.JobSplit;
@@ -1695,6 +1698,7 @@ class MapTask extends Task {
             }
           }
 
+	  ////modify this merge, add null args by @nourlcn
           //merge
           @SuppressWarnings("unchecked")
           RawKeyValueIterator kvIter = Merger.merge(job, rfs,
@@ -1702,7 +1706,7 @@ class MapTask extends Task {
                          segmentList, job.getInt("io.sort.factor", 100),
                          new Path(mapId.toString()),
                          job.getOutputKeyComparator(), reporter,
-                         null, spilledRecordsCounter);
+                         null, spilledRecordsCounter, null);
 
           //write merged output to disk
           long segmentStart = finalOut.getPos();

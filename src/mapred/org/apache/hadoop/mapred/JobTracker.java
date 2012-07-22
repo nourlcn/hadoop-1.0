@@ -3577,47 +3577,47 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
         for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
           TaskStatus ts = (TaskStatus) it.next();
           boolean isMap = ts.getIsMap();
-          boolean isShuffle = ts.getIsShuffle();
+          ////boolean isShuffle = ts.getIsShuffle();
           TaskStatus.State state = ts.getRunState();
           if (state == TaskStatus.State.RUNNING) {
             if (isMap) {
               ++runningMaps;
             } else {
-              if (isShuffle) {
-                ++runningShuffles;
-              } else {
+              //if (isShuffle) {
+              //  ++runningShuffles;
+              //} else {
                 ++runningReduces;
-              }
+              //}
             }
           } else if (state == TaskStatus.State.UNASSIGNED) {
             if (isMap) {
               ++unassignedMaps;
             } else {
-              if (isShuffle) {
-                ++unassignedShuffles;
-              } else {
+              //if (isShuffle) {
+              //  ++unassignedShuffles;
+              //} else {
                 ++unassignedReduces;
-              }
+              //}
             }
           } else if (state == TaskStatus.State.COMMIT_PENDING) {
             if (isMap) {
               ++commitPendingMaps;
             } else {
-              if (isShuffle) {
-                ++commitPendingShuffles;
-              } else {
+//              if (isShuffle) {
+//                ++commitPendingShuffles;
+//              } else {
                 ++commitPendingReduces;
-              }
+//              }
             }
           } else {
             if (isMap) {
               ++miscMaps;
             } else {
-              if (isShuffle) {
-                ++miscShuffles;
-              } else {
+//              if (isShuffle) {
+//                ++miscShuffles;
+//              } else {
                 ++miscReduces;
-              }
+//              }
             }
           }
         }

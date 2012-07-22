@@ -2736,9 +2736,9 @@ public class JobInProgress {
                                         status.getStateString(), 
                                         status.getCounters()); 
     } else {
-      if (status.getIsShuffle()) {
-        //TODO
-      } else {
+//      if (status.getIsShuffle()) {
+//        //TODO
+//      } else {
         JobHistory.ReduceAttempt.logStarted(status.getTaskID(),
             status.getStartTime(), status.getTaskTracker(),
             ttStatus.getHttpPort(), taskType);
@@ -2746,7 +2746,7 @@ public class JobInProgress {
             status.getShuffleFinishTime(), status.getSortFinishTime(),
             status.getFinishTime(), trackerHostname, taskType,
             status.getStateString(), status.getCounters());
-      }
+//      }
     }
     JobHistory.Task.logFinished(tip.getTIPId(), 
                                 taskType,
@@ -3198,9 +3198,9 @@ public class JobInProgress {
           taskTrackerHostName, diagInfo, taskType);
       }
     } else {
-      if (taskStatus.getIsShuffle()) {
-        // TODO add content.
-      } else {
+//      if (taskStatus.getIsShuffle()) {
+//        // TODO add content.
+//      } else {
         JobHistory.ReduceAttempt.logStarted(taskid, startTime, taskTrackerName,
             taskTrackerPort, taskType);
         if (taskStatus.getRunState() == TaskStatus.State.FAILED) {
@@ -3210,7 +3210,7 @@ public class JobInProgress {
           JobHistory.ReduceAttempt.logKilled(taskid, finishTime,
               taskTrackerHostName, diagInfo, taskType);
         }
-      }
+//      }
     }
         
     // After this, try to assign tasks with the one after this, so that

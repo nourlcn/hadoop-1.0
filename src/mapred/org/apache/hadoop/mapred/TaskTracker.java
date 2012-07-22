@@ -1902,10 +1902,12 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
             !taskStatus.inTaskCleanupPhase()) {
           if (taskStatus.getIsMap()) {
             mapTotal--;
-          } else if (taskStatus.getIsShuffle()) {
-            //TODO verify
-            shuffleTotal--;
-          } else {
+          } 
+//	  else if (taskStatus.getIsShuffle()) {
+//            //TODO verify
+//            shuffleTotal--;
+//          } 
+	  else {
             reduceTotal--;
           }
           myInstrumentation.completeTask(taskStatus.getTaskID());
