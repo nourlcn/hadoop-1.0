@@ -221,6 +221,8 @@ class ShuffleScheduler<K, V> {
       LOG.fatal("Shuffle failed with too many fetch failures "
           + "and insufficient progress!");
       String errorMsg = "Exceeded MAX_FAILED_UNIQUE_FETCHES; bailing-out.";
+	////check maxFailedUniqueFetches value
+      LOG.info(" MAX_FAILED_UNIQUE_FETCHES value is " + maxFailedUniqueFetches);
       reporter.reportException(new IOException(errorMsg));
     }
 

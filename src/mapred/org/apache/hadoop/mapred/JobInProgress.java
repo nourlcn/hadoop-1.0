@@ -780,15 +780,16 @@ public class JobInProgress {
 
     ////TODO init shuffle TaskInProgress
     //// Create Shuffle Tasks.
-    this.shuffles = new TaskInProgress[numShuffleTasks];
-    for (int i = 0; i < numShuffleTasks; i++) {
-      shuffles[i] = new TaskInProgress(jobId, jobFile, 
-                                      numMapTasks, i, 
-                                      jobtracker, conf, this, numSlotsPerShuffle);
-      nonRunningShuffles.add(shuffles[i]);
-    }
-    
-    LOG.info("[ACT-HADOOP]Create Shuffle Task Success!");
+
+    ////Shuffle Task may be not good way. 
+//    this.shuffles = new TaskInProgress[numShuffleTasks];
+//    for (int i = 0; i < numShuffleTasks; i++) {
+//      shuffles[i] = new TaskInProgress(jobId, jobFile, 
+//                                      numMapTasks, i, 
+//                                      jobtracker, conf, this, numSlotsPerShuffle);
+//      nonRunningShuffles.add(shuffles[i]);
+//    }  
+//    LOG.info("[ACT-HADOOP]Create Shuffle Task Success!");
     
     
     //
