@@ -588,7 +588,7 @@
   </target>
 
   <target name="compile-tools" depends="init">
-    <javac 
+    <javac includeantruntime="false"  
      encoding="${build.encoding}" 
      srcdir="${tools.src}"
      includes="org/apache/hadoop/**/*.java"
@@ -851,7 +851,7 @@
   <!-- Compile test code                                                  --> 
   <!-- ================================================================== -->
   <target name="compile-core-test" depends="compile-examples, compile-tools, generate-test-records">
-    <javac 
+    <javac includeantruntime="false" 
      encoding="${build.encoding}" 
      srcdir="${test.generated.dir}"
      includes="org/apache/hadoop/**/*.java"
@@ -2199,7 +2199,7 @@
 
 
   <target name="compile-ant-tasks" depends="compile-core">
-    <javac
+    <javac includeantruntime="false" 
         encoding="${build.encoding}"
         srcdir="${anttasks.dir}"
         includes="org/apache/hadoop/ant/**/*.java"
