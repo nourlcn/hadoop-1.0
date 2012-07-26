@@ -22,7 +22,7 @@ import java.io.*;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 
 /** Runs a reduce task. */
-class ReduceTaskRunner extends TaskRunner {
+public class ReduceTaskRunner extends TaskRunner {
 
   public ReduceTaskRunner(TaskInProgress task, TaskTracker tracker, 
                           JobConf conf, TaskTracker.RunningJob rjob
