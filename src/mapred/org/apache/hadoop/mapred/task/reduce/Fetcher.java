@@ -145,10 +145,13 @@ class Fetcher<K, V> extends Thread {
     }
   }
 
-  ////copy map outputs, one time for one host including many maps.
+  // //copy map outputs, one time for one host including many maps.
   /**
    * The crux of the matter...
-   * @param host {@link MapHost} from which we need to shuffle available map-outputs.
+   * 
+   * @param host
+   *          {@link MapHost} from which we need to shuffle available
+   *          map-outputs.
    */
   private void copyFromHost(MapHost host) throws IOException {
     // Get completed maps on 'host'
@@ -160,6 +163,7 @@ class Fetcher<K, V> extends Thread {
       return;
     }
 
+    // //for debug
     LOG.debug("Fetcher " + id + " going to fetch from " + host);
     if (LOG.isDebugEnabled()) {
       for (TaskAttemptID tmp : maps) {
@@ -175,7 +179,10 @@ class Fetcher<K, V> extends Thread {
     boolean connectSucceeded = false;
 
     try {
+      // MapOutputLocation loc = getMapOutputLocation();
       URL url = getMapOutputURL(host, maps);
+      // //for debug.
+      LOG.debug("URL is " + url.toString());
       URLConnection connection = url.openConnection();
 
       // generate hash of the url
@@ -184,13 +191,25 @@ class Fetcher<K, V> extends Thread {
           jobTokenSecret);
 
       // put url hash into http header
-      connection.addRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH,
+      connection.setRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH,
           encHash);
       // set the read timeout
       connection.setReadTimeout(readTimeout);
-      connect(connection, connectionTimeout);
+      connection.setConnectTimeout(connectionTimeout);
+
+      ////debug
+      LOG.info("____Connection URL is " + connection.getURL().toString());
+      LOG.debug("____Connection URL is " + connection.getURL().toString());
+
+      connection.connect();
       connectSucceeded = true;
-      input = new DataInputStream(connection.getInputStream());
+
+      // //!!!!!!!!!!!!!!!!!!!!Exception!
+      LOG.info("____1");
+      InputStream in = connection.getInputStream();
+      LOG.info("____2");
+      input = new DataInputStream(in);
+      LOG.info("____3");
 
       // get the replyHash which is HMac of the encHash we sent to the
       // server
@@ -215,9 +234,11 @@ class Fetcher<K, V> extends Thread {
       // indirectly penalizing the host
       if (!connectSucceeded) {
         for (TaskAttemptID left : remaining) {
-          scheduler.copyFailed(left, host, connectSucceeded);
+          // scheduler.copyFailed(left, host, connectSucceeded);
+          scheduler.copyFailed(left, host, false);
         }
       } else {
+        LOG.info("!!!!!!!!!!!!!!!!!!!!!connectionSucceed is true");
         // If we got a read error at this stage, it implies there was a
         // problem
         // with the first map, typically lost map. So, penalize only
@@ -305,9 +326,9 @@ class Fetcher<K, V> extends Thread {
       LOG.info("fetcher#" + id + " about to shuffle output of map "
           + mapOutput.getMapId() + " decomp: " + decompressedLength + " len: "
           + compressedLength + " to " + mapOutput.getType());
-      
-      //------------Important!----------//
-      ////Shuffle to mem or disk.
+
+      // ------------Important!----------//
+      // //Shuffle to mem or disk.
       if (mapOutput.getType() == Type.MEMORY) {
         shuffleToMemory(host, mapOutput, input, (int) decompressedLength,
             (int) compressedLength);
@@ -393,7 +414,9 @@ class Fetcher<K, V> extends Thread {
    */
   private URL getMapOutputURL(MapHost host, List<TaskAttemptID> maps)
       throws MalformedURLException {
-    // Get the base url
+    // // Get the base url: host.getBaseUrl() is :
+    // http://test07:8099/mapOutput?job=job_201207251327_0001&reduce=0&map=
+    String hostBaseUrl = host.getBaseUrl();
     StringBuffer url = new StringBuffer(host.getBaseUrl());
 
     boolean first = true;
@@ -450,7 +473,7 @@ class Fetcher<K, V> extends Thread {
     }
   }
 
-  ////main part of shuffle if using memory.
+  // //main part of shuffle if using memory.
   private void shuffleToMemory(MapHost host, MapOutput<K, V> mapOutput,
       InputStream input, int decompressedLength, int compressedLength)
       throws IOException {
@@ -483,7 +506,7 @@ class Fetcher<K, V> extends Thread {
 
   }
 
-  ////main part of shuffle if via disk.
+  // //main part of shuffle if via disk.
   private void shuffleToDisk(MapHost host, MapOutput<K, V> mapOutput,
       InputStream input, long compressedLength) throws IOException {
     // Copy data to local-disk

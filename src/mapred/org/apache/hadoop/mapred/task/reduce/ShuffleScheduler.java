@@ -1,5 +1,3 @@
-////TODO  read it!
-
 package org.apache.hadoop.mapred.task.reduce;
 
 import java.io.IOException;
@@ -66,7 +64,8 @@ class ShuffleScheduler<K, V> {
   private long lastProgressTime;
 
   private int maxMapRuntime = 0;
-  private int maxFailedUniqueFetches = 5;
+  ////debug: if I change this value from 5 to 10, error still ?
+  private int maxFailedUniqueFetches = 10;
   private int maxFetchFailuresBeforeReporting;
 
   private long totalBytesShuffledTillNow = 0;
@@ -150,6 +149,8 @@ class ShuffleScheduler<K, V> {
     }
     
     String hostname = host.getHostName();
+    ////FOR DEBUG
+    LOG.info("map failed at host: " + hostname);
     if (hostFailures.containsKey(hostname)) {
       IntWritable x = hostFailures.get(hostname);
       x.set(x.get() + 1);
@@ -183,6 +184,7 @@ class ShuffleScheduler<K, V> {
   private void checkAndInformJobTracker(int failures, TaskAttemptID mapId,
       boolean readError) {
     if ((reportReadErrorImmediately && readError)
+        //// TODO? why use % as judgement here ?
         || ((failures % maxFetchFailuresBeforeReporting) == 0)) {
       LOG.info("Reporting fetch failure for " + mapId + " to jobtracker.");
       status.addFetchFailedMap((org.apache.hadoop.mapred.TaskAttemptID) mapId);
@@ -196,7 +198,9 @@ class ShuffleScheduler<K, V> {
 
     long totalFailures = failedShuffleCounter.getValue();
     int doneMaps = totalMaps - remainingMaps;
-
+    ////for debug
+    LOG.info("totalFailures is " + totalFailures + "and doneMaps is " + doneMaps);
+    
     boolean reducerHealthy = (((float) totalFailures / (totalFailures + doneMaps)) < MAX_ALLOWED_FAILED_FETCH_ATTEMPT_PERCENT);
 
     // check if the reducer has progressed enough
@@ -216,14 +220,20 @@ class ShuffleScheduler<K, V> {
     boolean reducerStalled = (((float) stallDuration / minShuffleRunDuration) >= MAX_ALLOWED_STALL_TIME_PERCENT);
 
     // kill if not healthy and has insufficient progress
+    
+    ////debug
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("reducerHealthy value is " + reducerHealthy);
+      LOG.debug("reducerStalled value is " + reducerStalled);
+    }
     if ((failureCounts.size() >= maxFailedUniqueFetches || failureCounts.size() == (totalMaps - doneMaps))
         && !reducerHealthy && (!reducerProgressedEnough || reducerStalled)) {
       LOG.fatal("Shuffle failed with too many fetch failures "
           + "and insufficient progress!");
       String errorMsg = "Exceeded MAX_FAILED_UNIQUE_FETCHES; bailing-out.";
-	////check maxFailedUniqueFetches value
-      LOG.info(" MAX_FAILED_UNIQUE_FETCHES value is " + maxFailedUniqueFetches);
       reporter.reportException(new IOException(errorMsg));
+      ////add for debug
+      LOG.info("MAX_FAILED_UNIQUE_FETCHES value is " + maxFailedUniqueFetches);
     }
 
   }
@@ -265,13 +275,18 @@ class ShuffleScheduler<K, V> {
     }
 
     MapHost host = null;
-    // TODO loop through to find a random host,isn't too expensive?
+    
+    //// TODO loop through to find a random host,isn't too expensive?
     Iterator<MapHost> iter = pendingHosts.iterator();
     int numToPick = random.nextInt(pendingHosts.size());
     for (int i = 0; i <= numToPick; ++i) {
       host = iter.next();
     }
 
+    ////debug
+//    LOG.debug("Get one host as copyFromHost args. and host baseURL is " + host.getBaseUrl());
+//    host.getBaseUrl() is : http://test07:8099/mapOutput?job=job_201207251327_0001&reduce=0&map=
+    
     pendingHosts.remove(host);
     host.markBusy();
 

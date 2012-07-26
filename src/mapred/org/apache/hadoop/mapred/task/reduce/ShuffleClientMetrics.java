@@ -7,7 +7,7 @@ import org.apache.hadoop.metrics.MetricsRecord;
 import org.apache.hadoop.metrics.MetricsUtil;
 import org.apache.hadoop.metrics.Updater;
 
-class ShuffleClientMetrics implements Updater
+public class ShuffleClientMetrics implements Updater
 {
 
     private MetricsRecord shuffleMetrics = null;

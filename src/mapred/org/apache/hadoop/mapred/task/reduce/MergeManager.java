@@ -321,9 +321,13 @@ public class MergeManager<K, V> {
     if (inMemoryMapOutputs.size() > 0) {
       MapOutput<K, V> mo = ((TreeSet<MapOutput<K, V>>) inMemoryMapOutputs)
           .pollFirst();
-      Reader<K, V> reader = new InMemoryReader<K, V>(MergeManager.this,
-          mo.getMapId(), mo.getMemory(), 0,
-          (int) ((long) mo.getMemory().length));
+//      Reader<K, V> reader = new InMemoryReader<K, V>(MergeManager.this,
+//          mo.getMapId(), mo.getMemory(), 0,
+//          (int) ((long) mo.getMemory().length));
+      
+      ////may be not used. for debug
+      Reader<K, V> reader = null;
+      
       result = new Segment<K, V>(reader, true, null);
       LOG.info("Feed in memory data -> size :" + mo.getSize() + " to reduce");
     } else {
@@ -673,8 +677,12 @@ public class MergeManager<K, V> {
       long size = data.length;
       totalSize += size;
       fullSize -= size;
-      Reader<K, V> reader = new InMemoryReader<K, V>(MergeManager.this,
-          mo.getMapId(), data, 0, (int) size);
+//      Reader<K, V> reader = new InMemoryReader<K, V>(MergeManager.this,
+//          mo.getMapId(), data, 0, (int) size);
+
+      ////for debug.
+      Reader<K, V> reader = null;
+
       inMemorySegments.add(new Segment<K, V>(reader, true, (mo
           .isPrimaryMapOutput() ? mergedMapOutputsCounter : null)));
     }

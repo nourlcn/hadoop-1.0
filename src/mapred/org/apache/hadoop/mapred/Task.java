@@ -156,6 +156,7 @@ abstract public class Task implements Writable, Configurable {
   private ResourceCalculatorPlugin resourceCalculator = null;
   private long initCpuCumulativeTime = 0;
 
+  ////origin conf: protected.
   protected JobConf conf;
   protected MapOutputFile mapOutputFile = new MapOutputFile();
   protected LocalDirAllocator lDirAlloc;
@@ -221,7 +222,7 @@ abstract public class Task implements Writable, Configurable {
     return numSlotsRequired;
   }
 
-  Counters getCounters() { return counters; }
+  protected Counters getCounters() { return counters; }
 
   
   /**
@@ -510,7 +511,7 @@ abstract public class Task implements Writable, Configurable {
   private AtomicBoolean taskDone = new AtomicBoolean(false);
   
   public abstract boolean isMapTask();
-  public abstract boolean isShuffleTask();
+//  public abstract boolean isShuffleTask();
 
   public Progress getProgress() { return taskProgress; }
 
@@ -556,7 +557,7 @@ abstract public class Task implements Writable, Configurable {
     }
   }
   
-  protected class TaskReporter 
+  public class TaskReporter 
       extends org.apache.hadoop.mapreduce.StatusReporter
       implements Runnable, Reporter {
     private TaskUmbilicalProtocol umbilical;
@@ -1364,7 +1365,7 @@ abstract public class Task implements Writable, Configurable {
     }
   }
 
-  protected static abstract class CombinerRunner<K,V> {
+  public static abstract class CombinerRunner<K,V> {
     protected final Counters.Counter inputCounter;
     protected final JobConf job;
     protected final TaskReporter reporter;
@@ -1382,12 +1383,13 @@ abstract public class Task implements Writable, Configurable {
      * @param iterator the key/value pairs to use as input
      * @param collector the output collector
      */
-    abstract void combine(RawKeyValueIterator iterator, 
+    public abstract void combine(RawKeyValueIterator iterator, 
                           OutputCollector<K,V> collector
                          ) throws IOException, InterruptedException, 
                                   ClassNotFoundException;
 
     @SuppressWarnings("unchecked")
+    public
     static <K,V> 
     CombinerRunner<K,V> create(JobConf job,
                                TaskAttemptID taskId,
@@ -1435,7 +1437,7 @@ abstract public class Task implements Writable, Configurable {
     }
 
     @SuppressWarnings("unchecked")
-    protected void combine(RawKeyValueIterator kvIter,
+    public void combine(RawKeyValueIterator kvIter,
                            OutputCollector<K,V> combineCollector
                            ) throws IOException {
       Reducer<K,V,K,V> combiner = 
@@ -1502,7 +1504,7 @@ abstract public class Task implements Writable, Configurable {
 
     @SuppressWarnings("unchecked")
     @Override
-    void combine(RawKeyValueIterator iterator, 
+    public void combine(RawKeyValueIterator iterator, 
                  OutputCollector<K,V> collector
                  ) throws IOException, InterruptedException,
                           ClassNotFoundException {
