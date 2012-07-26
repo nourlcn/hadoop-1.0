@@ -304,9 +304,11 @@ public class Counters implements Writable, Iterable<Counters.Group> {
       String shortName = getShortName(name, COUNTER_NAME_LIMIT);
       Counter result = subcounters.get(shortName);
       if (result == null) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("Adding " + shortName);
-        }
+
+        // //too many debug info.
+        // if (LOG.isDebugEnabled()) {
+        // LOG.debug("Adding " + shortName);
+        // }
         numCounters = (numCounters == 0) ? Counters.this.size(): numCounters; 
         if (numCounters >= MAX_COUNTER_LIMIT) {
           throw new CountersExceededException("Error: Exceeded limits on number of counters - " 

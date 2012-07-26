@@ -268,17 +268,18 @@ class JobQueueTaskScheduler extends TaskScheduler {
       }
     }
     
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Task assignments for " + taskTrackerStatus.getTrackerName() + " --> " +
-                "[" + mapLoadFactor + ", " + trackerMapCapacity + ", " + 
-                trackerCurrentMapCapacity + ", " + trackerRunningMaps + "] -> [" + 
-                (trackerCurrentMapCapacity - trackerRunningMaps) + ", " +
-                assignedMaps + " (" + numLocalMaps + ", " + numNonLocalMaps + 
-                ")] [" + reduceLoadFactor + ", " + trackerReduceCapacity + ", " + 
-                trackerCurrentReduceCapacity + "," + trackerRunningReduces + 
-                "] -> [" + (trackerCurrentReduceCapacity - trackerRunningReduces) + 
-                ", " + (assignedTasks.size()-assignedMaps) + "]");
-    }
+    ////too many debug info.
+//    if (LOG.isDebugEnabled()) {
+//      LOG.debug("Task assignments for " + taskTrackerStatus.getTrackerName() + " --> " +
+//                "[" + mapLoadFactor + ", " + trackerMapCapacity + ", " + 
+//                trackerCurrentMapCapacity + ", " + trackerRunningMaps + "] -> [" + 
+//                (trackerCurrentMapCapacity - trackerRunningMaps) + ", " +
+//                assignedMaps + " (" + numLocalMaps + ", " + numNonLocalMaps + 
+//                ")] [" + reduceLoadFactor + ", " + trackerReduceCapacity + ", " + 
+//                trackerCurrentReduceCapacity + "," + trackerRunningReduces + 
+//                "] -> [" + (trackerCurrentReduceCapacity - trackerRunningReduces) + 
+//                ", " + (assignedTasks.size()-assignedMaps) + "]");
+//    }
 
     return assignedTasks;
   }

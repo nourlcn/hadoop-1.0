@@ -3312,13 +3312,14 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
                                                   boolean acceptNewTasks, 
                                                   short responseId) 
     throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Got heartbeat from: " + status.getTrackerName() + 
-                " (restarted: " + restarted + 
-                " initialContact: " + initialContact + 
-                " acceptNewTasks: " + acceptNewTasks + ")" +
-                " with responseId: " + responseId);
-    }
+    ////too many debug info.
+//    if (LOG.isDebugEnabled()) {
+//      LOG.debug("Got heartbeat from: " + status.getTrackerName() + 
+//                " (restarted: " + restarted + 
+//                " initialContact: " + initialContact + 
+//                " acceptNewTasks: " + acceptNewTasks + ")" +
+//                " with responseId: " + responseId);
+//    }
 
     // Make sure heartbeat is from a tasktracker allowed by the jobtracker.
     if (!acceptTaskTracker(status)) {
@@ -3568,69 +3569,70 @@ public class JobTracker implements MRConstants, InterTrackerProtocol,
       taskTracker.setStatus(status);
       taskTrackers.put(trackerName, taskTracker);
       
-      if (LOG.isDebugEnabled()) {
-        int runningMaps = 0, runningReduces = 0, runningShuffles = 0;
-        int commitPendingMaps = 0, commitPendingReduces = 0, commitPendingShuffles = 0;
-        int unassignedMaps = 0, unassignedReduces = 0, unassignedShuffles = 0;
-        int miscMaps = 0, miscReduces = 0, miscShuffles = 0;
-        List<TaskStatus> taskReports = status.getTaskReports();
-        for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
-          TaskStatus ts = (TaskStatus) it.next();
-          boolean isMap = ts.getIsMap();
-          ////boolean isShuffle = ts.getIsShuffle();
-          TaskStatus.State state = ts.getRunState();
-          if (state == TaskStatus.State.RUNNING) {
-            if (isMap) {
-              ++runningMaps;
-            } else {
-              //if (isShuffle) {
-              //  ++runningShuffles;
-              //} else {
-                ++runningReduces;
-              //}
-            }
-          } else if (state == TaskStatus.State.UNASSIGNED) {
-            if (isMap) {
-              ++unassignedMaps;
-            } else {
-              //if (isShuffle) {
-              //  ++unassignedShuffles;
-              //} else {
-                ++unassignedReduces;
-              //}
-            }
-          } else if (state == TaskStatus.State.COMMIT_PENDING) {
-            if (isMap) {
-              ++commitPendingMaps;
-            } else {
-//              if (isShuffle) {
-//                ++commitPendingShuffles;
-//              } else {
-                ++commitPendingReduces;
-//              }
-            }
-          } else {
-            if (isMap) {
-              ++miscMaps;
-            } else {
-//              if (isShuffle) {
-//                ++miscShuffles;
-//              } else {
-                ++miscReduces;
-//              }
-            }
-          }
-        }
-        LOG.debug(trackerName + ": Status -" +
-                  " running(m) = " + runningMaps + 
-                  " unassigned(m) = " + unassignedMaps + 
-                  " commit_pending(m) = " + commitPendingMaps +
-                  " misc(m) = " + miscMaps +
-                  " running(r) = " + runningReduces + 
-                  " unassigned(r) = " + unassignedReduces + 
-                  " commit_pending(r) = " + commitPendingReduces +
-                  " misc(r) = " + miscReduces); 
-      }
+      ////too many debug info.
+//      if (LOG.isDebugEnabled()) {
+//        int runningMaps = 0, runningReduces = 0, runningShuffles = 0;
+//        int commitPendingMaps = 0, commitPendingReduces = 0, commitPendingShuffles = 0;
+//        int unassignedMaps = 0, unassignedReduces = 0, unassignedShuffles = 0;
+//        int miscMaps = 0, miscReduces = 0, miscShuffles = 0;
+//        List<TaskStatus> taskReports = status.getTaskReports();
+//        for (Iterator<TaskStatus> it = taskReports.iterator(); it.hasNext();) {
+//          TaskStatus ts = (TaskStatus) it.next();
+//          boolean isMap = ts.getIsMap();
+//          ////boolean isShuffle = ts.getIsShuffle();
+//          TaskStatus.State state = ts.getRunState();
+//          if (state == TaskStatus.State.RUNNING) {
+//            if (isMap) {
+//              ++runningMaps;
+//            } else {
+//              //if (isShuffle) {
+//              //  ++runningShuffles;
+//              //} else {
+//                ++runningReduces;
+//              //}
+//            }
+//          } else if (state == TaskStatus.State.UNASSIGNED) {
+//            if (isMap) {
+//              ++unassignedMaps;
+//            } else {
+//              //if (isShuffle) {
+//              //  ++unassignedShuffles;
+//              //} else {
+//                ++unassignedReduces;
+//              //}
+//            }
+//          } else if (state == TaskStatus.State.COMMIT_PENDING) {
+//            if (isMap) {
+//              ++commitPendingMaps;
+//            } else {
+////              if (isShuffle) {
+////                ++commitPendingShuffles;
+////              } else {
+//                ++commitPendingReduces;
+////              }
+//            }
+//          } else {
+//            if (isMap) {
+//              ++miscMaps;
+//            } else {
+////              if (isShuffle) {
+////                ++miscShuffles;
+////              } else {
+//                ++miscReduces;
+////              }
+//            }
+//          }
+//        }
+//        LOG.debug(trackerName + ": Status -" +
+//                  " running(m) = " + runningMaps + 
+//                  " unassigned(m) = " + unassignedMaps + 
+//                  " commit_pending(m) = " + commitPendingMaps +
+//                  " misc(m) = " + miscMaps +
+//                  " running(r) = " + runningReduces + 
+//                  " unassigned(r) = " + unassignedReduces + 
+//                  " commit_pending(r) = " + commitPendingReduces +
+//                  " misc(r) = " + miscReduces); 
+//      }
 
       if (!alreadyPresent)  {
         Integer numTaskTrackersInHost = 
