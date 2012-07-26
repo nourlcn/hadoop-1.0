@@ -51,7 +51,7 @@ import org.apache.hadoop.util.StringUtils;
  * separate process in order to isolate the map/reduce system code from bugs in
  * user supplied map and reduce functions.
  */
-abstract class TaskRunner extends Thread {
+public abstract class TaskRunner extends Thread {
 
   static final String MAPRED_MAP_ADMIN_JAVA_OPTS =
     "mapreduce.admin.map.child.java.opts";
