@@ -157,7 +157,8 @@ class JettyBugMonitor extends Thread {
       } else if (percentCpu > warnThreshold) {
         LOG.warn(msg);
       } else if (LOG.isDebugEnabled()) {
-        LOG.debug(msg);
+//        too many debug info.
+//        LOG.debug(msg);
       }
 
       usageBefore = usageAfter;
