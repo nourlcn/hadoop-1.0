@@ -18,7 +18,7 @@ class MapHost
     }
     private State state = State.IDLE;
     private final String hostName;
-    private final String baseUrl;
+    private String baseUrl;
     private List<TaskAttemptID> maps = new ArrayList<TaskAttemptID>();
 
     public MapHost(String hostName, String baseUrl)
@@ -37,6 +37,11 @@ class MapHost
         return hostName;
     }
 
+    public void setBaseUrl(String baseUrl)
+    {
+      this.baseUrl = baseUrl;
+    }
+    
     public String getBaseUrl()
     {
         return baseUrl;
