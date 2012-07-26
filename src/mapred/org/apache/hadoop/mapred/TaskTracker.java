@@ -285,7 +285,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
   volatile int mapTotal = 0;
   volatile int reduceTotal = 0;
-  volatile int shuffleTotal = 0;
   boolean justStarted = true;
   boolean justInited = true;
   // Mark reduce tasks that are shuffling to rollback their events index
@@ -307,7 +306,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   public static final String SUBDIR = "taskTracker";
   static final String DISTCACHEDIR = "distcache";
   static final String JOBCACHE = "jobcache";
-  static final String OUTPUT = "output";
+  public static final String OUTPUT = "output";
   static final String JARSDIR = "jars";
   static final String LOCAL_SPLIT_FILE = "split.info";
   static final String JOBFILE = "job.xml";
@@ -323,7 +322,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   private Localizer localizer;
   private int maxMapSlots;
   private int maxReduceSlots;
-  private int maxShuffleSlots;
   private int failures;
   final long mapRetainSize;
   final long reduceRetainSize;
@@ -749,8 +747,6 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     this.runningJobs = new TreeMap<JobID, RunningJob>();
     this.mapTotal = 0;
     this.reduceTotal = 0;
-    ////
-    this.shuffleTotal = 0;
     this.acceptNewTasks = true;
     this.status = null;
 
@@ -840,11 +836,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
     mapLauncher = new TaskLauncher(TaskType.MAP, maxMapSlots);
     reduceLauncher = new TaskLauncher(TaskType.REDUCE, maxReduceSlots);
-    shuffleLauncher = new TaskLauncher(TaskType.Shuffle, maxShuffleSlots);
     
     mapLauncher.start();
     reduceLauncher.start();
-    shuffleLauncher.start();
 
     // create a localizer instance
     setLocalizer(new Localizer(localFs, localStorage.getDirs()));
@@ -1433,7 +1427,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     maxReduceSlots = conf.getInt(
                   "mapred.tasktracker.reduce.tasks.maximum", 2);
     ////currently, shuffle slots is equal to reduce slots.
-    maxShuffleSlots = maxReduceSlots;
+//    maxShuffleSlots = maxReduceSlots;
     
     diskHealthCheckInterval = conf.getLong(DISK_HEALTH_CHECK_INTERVAL_PROPERTY,
                                            DEFAULT_DISK_HEALTH_CHECK_INTERVAL);
@@ -1710,11 +1704,13 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         }
         
         TaskTrackerAction[] actions = heartbeatResponse.getActions();
-        if(LOG.isDebugEnabled()) {
-          LOG.debug("Got heartbeatResponse from JobTracker with responseId: " + 
-                    heartbeatResponse.getResponseId() + " and " + 
-                    ((actions != null) ? actions.length : 0) + " actions");
-        }
+
+        ////too many debug info.
+        //        if(LOG.isDebugEnabled()) {
+//          LOG.debug("Got heartbeatResponse from JobTracker with responseId: " + 
+//                    heartbeatResponse.getResponseId() + " and " + 
+//                    ((actions != null) ? actions.length : 0) + " actions");
+//        }
         ////check need to reinit or not
         if (reinitTaskTracker(actions)) {
           return State.STALE;
@@ -2455,15 +2451,15 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       tasks.put(t.getTaskID(), tip);
       runningTasks.put(t.getTaskID(), tip);
       boolean isMap = t.isMapTask();
-      boolean isShuffle = t.isShuffleTask();
+//      boolean isShuffle = t.isShuffleTask();
       if (isMap) {
         mapTotal++;
       } else {
-        if (isShuffle) {
-          shuffleTotal++;
-        } else {
-          reduceTotal++;
-        }
+        // if (isShuffle) {
+        // shuffleTotal++;
+        // } else {
+        reduceTotal++;
+        // }
       }
     }
     return tip;
@@ -2601,7 +2597,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   // lives at this TaskTracker.  It maintains the Task object,
   // its TaskStatus, and the TaskRunner.
   ///////////////////////////////////////////////////////
-  class TaskInProgress {
+  public class TaskInProgress {
     Task task;
     long lastProgressReport;
     StringBuffer diagnosticInfo = new StringBuffer();
@@ -3370,6 +3366,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       LOG.info("Killing unknown JVM " + jvmId);
       return new JvmTask(null, true);
     }
+
+//   //may be bug! reduce task could not run in JVM now. 
+        
     RunningJob rjob = runningJobs.get(jvmId.getJobId());
     if (rjob == null) { //kill the JVM since the job is dead
       LOG.info("Killing JVM " + jvmId + " since job " + jvmId.getJobId() +
@@ -3381,6 +3380,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       }
       return new JvmTask(null, true);
     }
+    
     TaskInProgress tip = jvmManager.getTaskForJvm(jvmId);
     if (tip == null) {
       return new JvmTask(null, false);
@@ -3654,7 +3654,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
   /**
    *  The datastructure for initializing a job
    */
-  static class RunningJob{
+  public static class RunningJob{
     private JobID jobid; 
     private JobConf jobConf;
     private Path localizedJobConf;
@@ -4040,6 +4040,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     private void verifyRequest(HttpServletRequest request, 
         HttpServletResponse response, TaskTracker tracker, String jobId) 
     throws IOException {
+      
+      LOG.debug("__________tasktracker is " + tracker.getName());
+      LOG.debug("__________jobId is " + jobId);
+      
       SecretKey tokenSecret = tracker.getJobTokenSecretManager()
           .retrieveTokenSecret(jobId);
       // string to encrypt
@@ -4116,10 +4120,10 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
     maxReduceSlots = reduceSlots;
   }
   
-  ////for unit test
-  synchronized void setMaxShuffleSlots(int shuffleSlots){
-    maxShuffleSlots = shuffleSlots;
-  }
+//  ////for unit test
+//  synchronized void setMaxShuffleSlots(int shuffleSlots){
+//    maxShuffleSlots = shuffleSlots;
+//  }
 
   /**
    * Is the TaskMemoryManager Enabled on this system?
