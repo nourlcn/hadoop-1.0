@@ -309,7 +309,7 @@ public class IFile {
     protected byte[] buffer = null;
     protected int bufferSize = DEFAULT_BUFFER_SIZE;
     protected DataInputBuffer dataIn = new DataInputBuffer();
-    int recNo = 1;
+    protected int recNo = 1;
 
     protected int currentKeyLength;
     protected int currentValueLength;
