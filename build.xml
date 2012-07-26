@@ -717,7 +717,7 @@
 
   <target name="compile-examples" 
           depends="compile-core,compile-tools,compile-c++-examples">
-    <javac 
+    <javac includeantruntime="false" 
      encoding="${build.encoding}" 
      srcdir="${examples.dir}"
      includes="org/apache/hadoop/**/*.java"
@@ -864,7 +864,7 @@
       <compilerarg line="${javac.args}" />
       <classpath refid="test.classpath"/>
     </javac>
-    <javac 
+    <javac includeantruntime="false" 
      encoding="${build.encoding}" 
      srcdir="${test.src.dir}"
      includes="org/apache/hadoop/**/*.java"
