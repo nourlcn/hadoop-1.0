@@ -111,10 +111,10 @@ class MapTask extends Task {
     return true;
   }
   
-  @Override
-  public boolean isShuffleTask() {
-    return false;
-  }
+//  @Override
+//  public boolean isShuffleTask() {
+//    return false;
+//  }
   
 
   @Override
