@@ -37,7 +37,7 @@ public class MapOutputFile {
 
   private JobConf conf;
 
-  static final String REDUCE_INPUT_FILE_FORMAT_STRING = "%s/map_%d.out";
+  public static final String REDUCE_INPUT_FILE_FORMAT_STRING = "%s/map_%d.out";
 
   MapOutputFile() {
   }
