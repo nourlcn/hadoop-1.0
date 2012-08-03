@@ -330,29 +330,29 @@ public class ReduceTask extends Task {
 //        job.getOutputKeyComparator(), reporter, spilledRecordsCounter, null)
 //        : reduceCopier.createKVIterator(job, rfs, reporter);    
     
-    final FileSystem rfs = FileSystem.getLocal(job).getRaw();
     RawKeyValueIterator rIter;;
     boolean isLocal = "local".equals(job.get("mapred.job.tracker", "local"));
     
+    final FileSystem rfs = FileSystem.getLocal(job).getRaw();
     
     if (!isLocal) {
       Class combinerClass = conf.getCombinerClass();
       CombineOutputCollector combineCollector = (null != combinerClass) ? new CombineOutputCollector(
           reduceCombineOutputCounter, reporter, conf) : null;
 //      copyPhase = this.getProgress().phase();
-
+          
       final Shuffle shuffle = new Shuffle(getTaskID(), job,
           FileSystem.getLocal(job), umbilical, super.lDirAlloc, reporter,
           codec, combinerClass, combineCollector, spilledRecordsCounter,
           reduceCombineInputCounter, shuffledMapsCounter, reduceShuffleBytes,
           failedShuffleCounter, mergedMapOutputsCounter, taskStatus, copyPhase,
-          sortPhase, this, mapOutputFile, jvmContext);
+          sortPhase, this, mapOutputFile, jvmContext, this.numMaps);
 
       LOG.info("___generate Shuffle instance.");
 
-      rIter = shuffle.myRun();
-//      shuffle.myRunWithoutMerge();
-      // rIter = shuffle.run();
+      rIter = shuffle.run();
+//      shuffle.runWithoutMerge();
+      // rIter = shuffle.otherRun();
     } else {
       // local job runner doesn't have a copy phase
 

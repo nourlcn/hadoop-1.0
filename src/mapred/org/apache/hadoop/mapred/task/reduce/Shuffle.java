@@ -47,18 +47,18 @@ import org.apache.hadoop.io.compress.CompressionCodec;
 import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.mapred.Counters;
+import org.apache.hadoop.mapred.IFile;
 import org.apache.hadoop.mapred.IFile.Reader;
 import org.apache.hadoop.mapred.IFile.Writer;
+import org.apache.hadoop.mapred.IFileInputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.JvmContext;
+import org.apache.hadoop.mapred.MRConstants;
 import org.apache.hadoop.mapred.MapOutputFile;
-import org.apache.hadoop.mapred.RawKeyValueIterator;
-import org.apache.hadoop.mapred.IFile;
-import org.apache.hadoop.mapred.IFileInputStream;
 import org.apache.hadoop.mapred.MapTaskCompletionEventsUpdate;
 import org.apache.hadoop.mapred.Merger;
-import org.apache.hadoop.mapred.MRConstants;
 import org.apache.hadoop.mapred.RamManager;
+import org.apache.hadoop.mapred.RawKeyValueIterator;
 import org.apache.hadoop.mapred.ReduceTask;
 import org.apache.hadoop.mapred.ReduceTaskRunner;
 import org.apache.hadoop.mapred.Reducer;
@@ -66,6 +66,7 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.Segment;
 import org.apache.hadoop.mapred.ShuffleClientInstrumentation;
 import org.apache.hadoop.mapred.Task;
+import org.apache.hadoop.mapred.TaskAttemptID;
 import org.apache.hadoop.mapred.TaskCompletionEvent;
 import org.apache.hadoop.mapred.TaskID;
 import org.apache.hadoop.mapred.TaskRunner;
@@ -75,13 +76,10 @@ import org.apache.hadoop.mapred.TaskTracker.RunningJob;
 import org.apache.hadoop.mapred.TaskTracker.TaskInProgress;
 import org.apache.hadoop.mapred.TaskUmbilicalProtocol;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
-import org.apache.hadoop.mapred.TaskAttemptID;
-
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.hadoop.util.StringUtils;
-
-import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 
 public class Shuffle<K, V> extends Task {// implements ExceptionReporter
   public static enum CopyOutputErrorType {
@@ -111,7 +109,6 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
   private final TaskAttemptID reduceId;
   private final JobConf jobConf;
   private final TaskReporter reporter;
-  private final ShuffleClientMetrics metrics;
   private final TaskUmbilicalProtocol umbilical;
 
   // private final ShuffleScheduler<K, V> scheduler;
@@ -127,7 +124,7 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
   private int numMaps;
   private float maxRedPer;
   private CompressionCodec codec;
-  private int numCopiers;
+  private final int numCopiers;
   LocalDirAllocator ldir;
 
   private final ReduceCopier reduceCopier;
@@ -166,31 +163,34 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
       Counters.Counter failedShuffleCounter,
       Counters.Counter mergedMapOutputsCounter, TaskStatus status,
       Progress copyPhase, Progress mergePhase, ReduceTask reduceTask,
-      MapOutputFile mapOutputFile, JvmContext jvmContext) throws IOException, ClassNotFoundException {
+      MapOutputFile mapOutputFile, JvmContext jvmContext, int numMaps) throws IOException, ClassNotFoundException {
     this.ldir = localDirAllocator;
     this.reduceId = reduceId;
     this.jobConf = jobConf;
     this.umbilical = umbilical;
     this.reporter = reporter;
-    this.metrics = new ShuffleClientMetrics(reduceId, jobConf);
     this.copyPhase = copyPhase;
     this.taskStatus = status;
     this.reduceTask = reduceTask;
     this.jvmContext = jvmContext;
     this.codec = codec;
+//    this.metrics = new ShuffleClientMetrics(reduceId, jobConf);
+    this.numMaps = numMaps;
+    this.numCopiers = this.jobConf.getInt("mapred.reduce.parallel.copies", 1);
 
-    if (codec == null) {
+    
+    if (this.codec == null) {
       if (jobConf.getCompressMapOutput()) {
         Class<? extends CompressionCodec> codecClass = jobConf
             .getMapOutputCompressorClass(DefaultCodec.class);
-        codec = ReflectionUtils.newInstance(codecClass, jobConf);
+        this.codec = ReflectionUtils.newInstance(codecClass, jobConf);
       }
     }
-    if (codec == null) {
+    if (this.codec == null) {
       this.reduceCopier = new ReduceCopier();
     } else// // may be never run this else.
     {
-      this.reduceCopier = new ReduceCopier(codec);
+      this.reduceCopier = new ReduceCopier(this.codec);
     }
 
     // scheduler = new ShuffleScheduler<K, V>(jobConf, status, this, copyPhase,
@@ -199,67 +199,6 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
     // localDirAllocator, reporter, codec, combinerClass, combineCollector,
     // spilledRecordsCounter, reduceCombineInputCounter,
     // mergedMapOutputsCounter, this, mergePhase, mapOutputFile);
-  }
-
-  public Shuffle(TaskAttemptID reduceId, JobConf jobConf, FileSystem localFS,
-      TaskUmbilicalProtocol umbilical, LocalDirAllocator localDirAllocator,
-      TaskReporter reporter, CompressionCodec codec,
-      Class<? extends Reducer> combinerClass,
-      CombineOutputCollector<K, V> combineCollector,
-      Counters.Counter spilledRecordsCounter,
-      Counters.Counter reduceCombineInputCounter,
-      Counters.Counter shuffledMapsCounter,
-      Counters.Counter reduceShuffleBytes,
-      Counters.Counter failedShuffleCounter,
-      Counters.Counter mergedMapOutputsCounter, TaskStatus status,
-      Progress copyPhase, Progress mergePhase, ReduceTask reduceTask,
-      MapOutputFile mapOutputFile, JvmContext jvmContext,
-      Set<String> uniqueHosts, int numMaps) throws IOException, ClassNotFoundException {
-    this(reduceId, jobConf, localFS, umbilical, localDirAllocator, reporter,
-        codec, combinerClass, combineCollector, spilledRecordsCounter,
-        reduceCombineInputCounter, shuffledMapsCounter, reduceShuffleBytes,
-        failedShuffleCounter, mergedMapOutputsCounter, status, copyPhase,
-        mergePhase, reduceTask, mapOutputFile, jvmContext);
-
-    this.numMaps = numMaps;
-    // this.uniqueHosts = uniqueHosts;
-    // this.shuffleClientMetrics = createShuffleClientInstrumentation();
-    //
-    // this.scheduledCopies = new ArrayList<MapOutputLocation>(100);
-    // this.copyResults = new ArrayList<CopyResult>(100);
-    // this.maxInFlight = 4 * numCopiers;
-    Counters.Counter combineInputCounter = reporter
-        .getCounter(Task.Counter.COMBINE_INPUT_RECORDS);
-
-    // //abortFailureLimit
-    // this.abortFailureLimit = Math.max(30, numMaps / 10);
-
-    // //max failures per map before report.
-
-    this.maxFailedUniqueFetches = Math
-        .min(numMaps, this.maxFailedUniqueFetches);
-    this.numCopiers = this.jobConf.getInt("mapred.reduce.parallel.copies", 5);
-    this.maxRedPer = this.jobConf.getFloat(
-        "mapred.job.reduce.input.buffer.percent", 0f);
-    if (maxRedPer > 1.0 || maxRedPer < 0.0) {
-      LOG.error("mapred.job.reduce.input.buffer.percent" + maxRedPer);
-    }
-    // this.maxInMemReduce = (int) Math.min(Runtime.getRuntime().maxMemory()
-    // * maxRedPer, Integer.MAX_VALUE);
-    // hosts -> next contact time
-    // this.penaltyBox = new LinkedHashMap<String, Long>();
-
-    // hostnames
-    // this.uniqueHosts = new HashSet<String>();
-
-    // Seed the random number generator with a reasonably globally unique seed
-    long randomSeed = System.nanoTime()
-        + (long) Math.pow(this.reduceTask.getPartition(),
-            (this.reduceTask.getPartition() % 10));
-    // this.random = new Random(randomSeed);
-    // this.maxMapRuntime = 0;
-    // this.reportReadErrorImmediately = this.jobConf.getBoolean(
-    // "mapreduce.reduce.shuffle.notify.readerror", true);
   }
 
   @SuppressWarnings("unused")
@@ -716,11 +655,11 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
 
       private MapOutputLocation currentLocation = null;
       private int id = nextMapOutputCopierId++;
-      private Reporter reporter;
+//      private Reporter reporter;
       private boolean readError = false;
 
       // Decompression of map-outputs
-      private CompressionCodec codec = null;
+//      private CompressionCodec codec = null;
       private Decompressor decompressor = null;
 
       private final SecretKey jobTokenSecret;
@@ -729,7 +668,7 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
           SecretKey jobTokenSecret) {
         setName("MapOutputCopier " + reduceTask.getTaskID() + "." + id);
         LOG.debug(getName() + " created");
-        this.reporter = reporter;
+//        this.reporter = reporter;
 
         this.jobTokenSecret = jobTokenSecret;
 
@@ -768,6 +707,7 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
       }
 
       private synchronized void start(MapOutputLocation loc) {
+        LOG.debug("______ in Shuffle.start()");
         currentLocation = loc;
       }
 
@@ -794,18 +734,20 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
             MapOutputLocation loc = null;
             long size = -1;
 
-            LOG.info("ScheduledCopies size is " + scheduledCopies.size());
 
             synchronized (scheduledCopies) {
               // //list of map output currently being copied.
               while (scheduledCopies.isEmpty()) {
                 scheduledCopies.wait();
               }
+              
+              LOG.debug("_________ScheduledCopies size is " + scheduledCopies.size());
               loc = scheduledCopies.remove(0);
+              ////debug. mapoutput location url.
+              LOG.debug("________loc is " + loc.getOutputLocation().toString());
             }
 
-            LOG.info("_____Map Output host is" + loc.getHost());
-            LOG.info("_____Map Output Location host is"
+            LOG.info("_____Map Output Location host is "
                 + loc.getOutputLocation());
 
             // //get map output location
@@ -817,6 +759,7 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
               // //size: bytes of in-mem or ondisk data we have copied from map
               // to reduce.
               size = copyOutput(loc);
+              
               LOG.debug("copyOutput size() is " + size);
 
               shuffleClientMetrics.successFetch();
@@ -873,11 +816,13 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
        */
       private long copyOutput(MapOutputLocation loc) throws IOException,
           InterruptedException {
-        LOG.debug("________here: copyOutput(loc)");
+        
+        LOG.debug("________enter MapOutputCopier.copyOutput(loc)");
 
         // check if we still need to copy the output from this location
         if (copiedMapOutputs.contains(loc.getTaskId())
             || obsoleteMapIds.contains(loc.getTaskAttemptId())) {
+          LOG.debug("_____in MapOutputCopier.copyOutput, return COpyResult.OBSOLETE");
           return CopyResult.OBSOLETE;
         }
 
@@ -885,8 +830,8 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         // else, we will check the localFS to find a suitable final location
         // for this path
         TaskAttemptID reduceId = reduceTask.getTaskID();
-
-        LOG.info("_____Reduce ID is " + reduceId);
+        
+        LOG.debug("_____TaskAttemptID reduceID is " + reduceId);
 
         Path filename = new Path(String.format(
             MapOutputFile.REDUCE_INPUT_FILE_FORMAT_STRING, TaskTracker.OUTPUT,
@@ -895,10 +840,13 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         // Copy the map output to a temp file whose name is unique to this
         // attempt
         Path tmpMapOutput = new Path(filename + "-" + id);
+        
+        LOG.debug("____tmpMapOutput name is " + tmpMapOutput.toString());
 
         // Copy the map output
         MapOutput mapOutput = getMapOutput(loc, tmpMapOutput, reduceId
             .getTaskID().getId());
+        ////___________
         // //Now ,input is in Mem or local tmp file.
 
         if (mapOutput == null) {
@@ -991,14 +939,18 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
        */
       private MapOutput getMapOutput(MapOutputLocation mapOutputLoc,
           Path filename, int reduce) throws IOException, InterruptedException {
+        LOG.debug("____enter MapOutputCopier.getMapOutput()");
         // Connect
         URL url = mapOutputLoc.getOutputLocation();
 
-        LOG.info("_________URL is " + url.toString());
+        LOG.debug("_________getMapOutput() URL is " + url.toString());
 
         URLConnection connection = url.openConnection();
+        LOG.debug("_________URLconnection.getURL().toString() is " + connection.getURL().toString());
+        
         InputStream input = setupSecureConnection(mapOutputLoc, connection);
 
+        LOG.debug("_____input.available is " + input.available());
         // Validate header from map output
         TaskAttemptID mapId = null;
         try {
@@ -1009,11 +961,11 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
           return null;
         }
 
-        LOG.info("____MAP ID is " + mapId);
+        LOG.debug("____MAP ID is " + mapId);
 
         TaskAttemptID expectedMapId = mapOutputLoc.getTaskAttemptId();
 
-        LOG.info("____Expected Map ID is " + expectedMapId);
+        LOG.debug("____Expected Map ID is " + expectedMapId);
 
         if (!mapId.equals(expectedMapId)) {
           LOG.warn("data from wrong map:" + mapId + " arrived to reduce task "
@@ -1027,8 +979,8 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         long compressedLength = Long.parseLong(connection
             .getHeaderField(MAP_OUTPUT_LENGTH));
 
-        LOG.info("_____decompressdLength is " + decompressedLength);
-        LOG.info("_____compressdLength is " + compressedLength);
+        LOG.debug("_____decompressdLength is " + decompressedLength);
+        LOG.debug("_____compressdLength is " + compressedLength);
 
         if (compressedLength < 0 || decompressedLength < 0) {
           LOG.warn(getName() + " invalid lengths in map output header: id: "
@@ -1039,7 +991,7 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         int forReduce = (int) Integer.parseInt(connection
             .getHeaderField(FOR_REDUCE_TASK));
 
-        LOG.info("____FOr reduce is " + forReduce);
+        LOG.debug("____FOr reduce is " + forReduce);
 
         if (forReduce != reduce) {
           LOG.warn("data for the wrong reduce: " + forReduce
@@ -1093,16 +1045,19 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         // generate hash of the url
         String msgToEncode = SecureShuffleUtils.buildMsgFrom(connection
             .getURL());
+        
+        LOG.debug("_____________jobTokenSecret.getFormat() is " + jobTokenSecret.getFormat());
         String encHash = SecureShuffleUtils.hashFromString(msgToEncode,
             jobTokenSecret);
-
+        LOG.debug("____before setRequestProperty");
         // put url hash into http header
         connection.setRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH,
             encHash);
-
+        LOG.debug("____after setRequestProperty");
+        
         InputStream input = getInputStream(connection,
             shuffleConnectionTimeout, shuffleReadTimeout);
-
+        LOG.debug("____after getINputStream");
         // get the replyHash which is HMac of the encHash we sent to the server
         String replyHash = connection
             .getHeaderField(SecureShuffleUtils.HTTP_HEADER_REPLY_URL_HASH);
@@ -1126,6 +1081,7 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
        */
       private InputStream getInputStream(URLConnection connection,
           int connectionTimeout, int readTimeout) throws IOException {
+        LOG.debug("______enter Shuffle.getInputStream()");
         int unit = 0;
         if (connectionTimeout < 0) {
           throw new IOException("Invalid timeout " + "[timeout = "
@@ -1140,6 +1096,8 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         connection.setConnectTimeout(unit);
         while (true) {
           try {
+            LOG.debug("_____before Shuffle.getInputStream() connection.connect");
+            LOG.debug("_____connection class name is " + connection.getClass().getName().toString());
             connection.connect();
             break;
           } catch (IOException ioe) {
@@ -1158,9 +1116,14 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
               // reset the connect time out for the final connect
               connection.setConnectTimeout(unit);
             }
+            
+            ////for debug
+            ioe.printStackTrace();
           }
         }
         try {
+          LOG.debug("_________connection type is " + connection.getClass().getName());
+          LOG.debug("___________connection.getReadTimeout is " + connection.getReadTimeout());
           return connection.getInputStream();
         } catch (IOException ioe) {
           readError = true;
@@ -1434,19 +1397,20 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
 
     public ReduceCopier(CompressionCodec copierCodec)
         throws ClassNotFoundException, IOException {
-
       this();
       this.lfsmergeCodec = copierCodec;
-
     }
 
     public ReduceCopier() throws IOException, ClassNotFoundException {
-
+      ////add by @nourlcn
+      mapOutputFile.setConf(jobConf);
+      
       configureClasspath(jobConf);
       // this.shuffleClientMetrics = createShuffleClientInstrumentation();
       // may be bug here
       // this.reduceTask = reduceTask ;
 
+      this.shuffleClientMetrics = createShuffleClientInstrumentation();
       this.scheduledCopies = new ArrayList<MapOutputLocation>(100);
       this.copyResults = new ArrayList<CopyResult>(100);
       this.numCopiers = jobConf.getInt("mapred.reduce.parallel.copies", 5);
@@ -1527,6 +1491,8 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
       InMemFSMergeThread inMemFSMergeThread = null;
       GetMapEventsThread getMapEventsThread = null;
 
+      LOG.debug("_______enter fetchOutputs, numMaps is " + numMaps + "numCopiers is " + numCopiers);
+      
       for (int i = 0; i < numMaps; i++) {
         copyPhase.addPhase(); // add sub-phase per file
       }
@@ -1540,6 +1506,10 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         // //threads for fetching map output.
         copiers.add(copier);
         // //copy data from map to reduce. in-mem or on disk.
+        if (1 == i)
+        {
+          LOG.debug("____before copier.start()");
+        }
         copier.start();
       }
 
@@ -1959,6 +1929,7 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
           // must spill to disk, but can't retain in-mem for intermediate merge
           final Path outputPath = mapOutputFile.getInputFileForWrite(mapId,
               inMemToDiskBytes);
+          
           final RawKeyValueIterator rIter = Merger.merge(job, fs, keyClass,
               valueClass, memDiskSegments, numMemDiskSegments, tmpDir,
               comparator, reporter, false, spilledRecordsCounter, null, null);
@@ -2503,9 +2474,11 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
   // return kvIter;
   // }
 
-  public RawKeyValueIterator myRun() throws IOException, ClassNotFoundException {
+  public RawKeyValueIterator run() throws IOException, ClassNotFoundException {
     RawKeyValueIterator rIter;
-    myRunWithoutMerge();
+    LOG.debug("__________enter Shuffle.run(),before runWithoutMerge");
+    runWithoutMerge();
+    LOG.debug("__________after runWithoutMerge");
     rIter = reduceCopier.createKVIterator(jobConf, FileSystem.getLocal(jobConf)
         .getRaw(), reporter);
     
@@ -2516,9 +2489,10 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
     return rIter;
   }
 
-  public void myRunWithoutMerge() throws IOException, ClassNotFoundException {
-
+  public void runWithoutMerge() throws IOException, ClassNotFoundException {
+    LOG.debug("______enter runWithoutMerge()");
     boolean fetchState = reduceCopier.fetchOutputs();
+    LOG.debug("fetchState is " + fetchState);
     if (!fetchState) {
       if (reduceCopier.mergeThrowable instanceof FSError) {
         throw (FSError) reduceCopier.mergeThrowable;
@@ -2567,8 +2541,7 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
     }
   }
 
-  @Override
-  public void run(JobConf job, TaskUmbilicalProtocol umbilical)
+  public void OtherRun(JobConf job, TaskUmbilicalProtocol umbilical)
       throws IOException, ClassNotFoundException, InterruptedException {
     LOG.info("___TEST run or not.");
   }
@@ -2582,6 +2555,13 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
   public TaskRunner createRunner(TaskTracker tracker, TaskInProgress tip,
       RunningJob rjob) throws IOException {
     return null;
+  }
+
+  @Override
+  public void run(JobConf job, TaskUmbilicalProtocol umbilical)
+      throws IOException, ClassNotFoundException, InterruptedException {
+    // TODO Auto-generated method stub
+    
   }
 
 }

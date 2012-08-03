@@ -39,8 +39,9 @@ public class MapOutputFile {
 
   public static final String REDUCE_INPUT_FILE_FORMAT_STRING = "%s/map_%d.out";
 
-  MapOutputFile() {
-  }
+  MapOutputFile() {}
+  
+  MapOutputFile(JobConf conf) {this.conf = conf;}
 
   private LocalDirAllocator lDirAlloc = 
                             new LocalDirAllocator("mapred.local.dir");

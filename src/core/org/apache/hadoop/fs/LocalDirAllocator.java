@@ -247,6 +247,11 @@ public class LocalDirAllocator {
      */
     private synchronized void confChanged(Configuration conf
                                           ) throws IOException {
+      ////debug
+      if (contextCfgItemName == null)
+      {
+        LOG.debug("__________!!!!!! contextCfgItemName == null LocalDIrAllocator:253");
+      }
       String newLocalDirs = conf.get(contextCfgItemName);
       if (!newLocalDirs.equals(savedLocalDirs)) {
         String[] localDirs = conf.getStrings(contextCfgItemName);

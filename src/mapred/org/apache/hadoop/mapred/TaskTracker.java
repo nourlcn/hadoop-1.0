@@ -3867,6 +3867,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       String reduceId = request.getParameter("reduce");
       String jobId = request.getParameter("job");
 
+      LOG.debug("_________get one request");
       if (jobId == null) {
         throw new IOException("job parameter is required");
       }
@@ -3874,6 +3875,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       if (mapId == null || reduceId == null) {
         throw new IOException("map and reduce parameters are required");
       }
+      
+      LOG.debug("______JobId,mapId,reduceId are " + jobId + " " + mapId + " " + reduceId);
       ServletContext context = getServletContext();
       int reduce = Integer.parseInt(reduceId);
       byte[] buffer = new byte[MAX_BYTES_TO_READ];
@@ -3885,6 +3888,11 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
       long totalRead = 0;
       ShuffleServerInstrumentation shuffleMetrics =
         (ShuffleServerInstrumentation) context.getAttribute("shuffleServerMetrics");
+      ////debug 
+      if (shuffleMetrics == null)
+      {
+        LOG.debug("_______shuffleMetrics is null");
+      }
       TaskTracker tracker = 
         (TaskTracker) context.getAttribute("task.tracker");
       ShuffleExceptionTracker shuffleExceptionTracking =
@@ -3897,6 +3905,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         shuffleMetrics.serverHandlerBusy();
         if(ClientTraceLog.isInfoEnabled())
           startTime = System.nanoTime();
+        LOG.debug("_______to here~!");
         outStream = response.getOutputStream();
         JobConf conf = (JobConf) context.getAttribute("conf");
         LocalDirAllocator lDirAlloc = 
@@ -4041,6 +4050,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         HttpServletResponse response, TaskTracker tracker, String jobId) 
     throws IOException {
       
+      LOG.debug("__________enter verifyRequest.");
       LOG.debug("__________tasktracker is " + tracker.getName());
       LOG.debug("__________jobId is " + jobId);
       
