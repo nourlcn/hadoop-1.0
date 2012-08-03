@@ -740,15 +740,9 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
               while (scheduledCopies.isEmpty()) {
                 scheduledCopies.wait();
               }
-              
-              LOG.debug("_________ScheduledCopies size is " + scheduledCopies.size());
               loc = scheduledCopies.remove(0);
               ////debug. mapoutput location url.
-              LOG.debug("________loc is " + loc.getOutputLocation().toString());
             }
-
-            LOG.info("_____Map Output Location host is "
-                + loc.getOutputLocation());
 
             // //get map output location
             CopyOutputErrorType error = CopyOutputErrorType.OTHER_ERROR;
@@ -759,7 +753,6 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
               // //size: bytes of in-mem or ondisk data we have copied from map
               // to reduce.
               size = copyOutput(loc);
-              
               LOG.debug("copyOutput size() is " + size);
 
               shuffleClientMetrics.successFetch();
@@ -818,7 +811,6 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
           InterruptedException {
         
         LOG.debug("________enter MapOutputCopier.copyOutput(loc)");
-
         // check if we still need to copy the output from this location
         if (copiedMapOutputs.contains(loc.getTaskId())
             || obsoleteMapIds.contains(loc.getTaskAttemptId())) {
@@ -831,8 +823,6 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         // for this path
         TaskAttemptID reduceId = reduceTask.getTaskID();
         
-        LOG.debug("_____TaskAttemptID reduceID is " + reduceId);
-
         Path filename = new Path(String.format(
             MapOutputFile.REDUCE_INPUT_FILE_FORMAT_STRING, TaskTracker.OUTPUT,
             loc.getTaskId().getId()));
@@ -841,14 +831,11 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         // attempt
         Path tmpMapOutput = new Path(filename + "-" + id);
         
-        LOG.debug("____tmpMapOutput name is " + tmpMapOutput.toString());
-
         // Copy the map output
         MapOutput mapOutput = getMapOutput(loc, tmpMapOutput, reduceId
             .getTaskID().getId());
         ////___________
         // //Now ,input is in Mem or local tmp file.
-
         if (mapOutput == null) {
           throw new IOException("Failed to fetch map-output for "
               + loc.getTaskAttemptId() + " from " + loc.getHost());
@@ -942,15 +929,8 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         LOG.debug("____enter MapOutputCopier.getMapOutput()");
         // Connect
         URL url = mapOutputLoc.getOutputLocation();
-
-        LOG.debug("_________getMapOutput() URL is " + url.toString());
-
         URLConnection connection = url.openConnection();
-        LOG.debug("_________URLconnection.getURL().toString() is " + connection.getURL().toString());
-        
         InputStream input = setupSecureConnection(mapOutputLoc, connection);
-
-        LOG.debug("_____input.available is " + input.available());
         // Validate header from map output
         TaskAttemptID mapId = null;
         try {
@@ -961,11 +941,7 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
           return null;
         }
 
-        LOG.debug("____MAP ID is " + mapId);
-
         TaskAttemptID expectedMapId = mapOutputLoc.getTaskAttemptId();
-
-        LOG.debug("____Expected Map ID is " + expectedMapId);
 
         if (!mapId.equals(expectedMapId)) {
           LOG.warn("data from wrong map:" + mapId + " arrived to reduce task "
@@ -979,8 +955,8 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         long compressedLength = Long.parseLong(connection
             .getHeaderField(MAP_OUTPUT_LENGTH));
 
-        LOG.debug("_____decompressdLength is " + decompressedLength);
-        LOG.debug("_____compressdLength is " + compressedLength);
+//        LOG.debug("_____decompressdLength is " + decompressedLength);
+//        LOG.debug("_____compressdLength is " + compressedLength);
 
         if (compressedLength < 0 || decompressedLength < 0) {
           LOG.warn(getName() + " invalid lengths in map output header: id: "
@@ -1506,10 +1482,6 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         // //threads for fetching map output.
         copiers.add(copier);
         // //copy data from map to reduce. in-mem or on disk.
-        if (1 == i)
-        {
-          LOG.debug("____before copier.start()");
-        }
         copier.start();
       }
 
@@ -2476,7 +2448,6 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
 
   public RawKeyValueIterator run() throws IOException, ClassNotFoundException {
     RawKeyValueIterator rIter;
-    LOG.debug("__________enter Shuffle.run(),before runWithoutMerge");
     runWithoutMerge();
     LOG.debug("__________after runWithoutMerge");
     rIter = reduceCopier.createKVIterator(jobConf, FileSystem.getLocal(jobConf)
@@ -2492,7 +2463,6 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
   public void runWithoutMerge() throws IOException, ClassNotFoundException {
     LOG.debug("______enter runWithoutMerge()");
     boolean fetchState = reduceCopier.fetchOutputs();
-    LOG.debug("fetchState is " + fetchState);
     if (!fetchState) {
       if (reduceCopier.mergeThrowable instanceof FSError) {
         throw (FSError) reduceCopier.mergeThrowable;
