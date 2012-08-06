@@ -339,16 +339,14 @@ public class ReduceTask extends Task {
       Class combinerClass = conf.getCombinerClass();
       CombineOutputCollector combineCollector = (null != combinerClass) ? new CombineOutputCollector(
           reduceCombineOutputCounter, reporter, conf) : null;
-//      copyPhase = this.getProgress().phase();
-          
+      // copyPhase = this.getProgress().phase();
+
       final Shuffle shuffle = new Shuffle(getTaskID(), job,
           FileSystem.getLocal(job), umbilical, super.lDirAlloc, reporter,
           codec, combinerClass, combineCollector, spilledRecordsCounter,
           reduceCombineInputCounter, shuffledMapsCounter, reduceShuffleBytes,
           failedShuffleCounter, mergedMapOutputsCounter, taskStatus, copyPhase,
           sortPhase, this, mapOutputFile, jvmContext, this.numMaps);
-
-      LOG.info("___generate Shuffle instance.");
 
       rIter = shuffle.run();
 //      shuffle.runWithoutMerge();
