@@ -686,12 +686,8 @@ public class JobInProgress {
    * Construct the splits, etc.  This is invoked from an async
    * thread so that split-computation doesn't block anyone.
    */
-  ////TODO need to create ShuffleTask.
   public synchronized void initTasks() 
   throws IOException, KillInterruptedException, UnknownHostException {
-    // //
-    LOG.info("[ACT-HADOOP]JobInProgress.initTasks()");
-
     if (tasksInited || isComplete()) {
       return;
     }
@@ -742,15 +738,8 @@ public class JobInProgress {
       NetUtils.verifyHostnames(split.getLocations());
     }
     
-//    ////for debug
-//    for (TaskSplitMetaInfo split : splits) {
-//      LOG.error("[ACT-HADOOP]split.getLocations() is " + split.getLocations());
-//    }
-    
     jobtracker.getInstrumentation().addWaitingMaps(getJobID(), numMapTasks);
     jobtracker.getInstrumentation().addWaitingReduces(getJobID(), numReduceTasks);
-////    
-//    jobtracker.getInstrumentation().addWaitingShuffles(getJobID(), numShuffleTasks);
     
     this.queueMetrics.addWaitingMaps(getJobID(), numMapTasks);
     this.queueMetrics.addWaitingReduces(getJobID(), numReduceTasks);
