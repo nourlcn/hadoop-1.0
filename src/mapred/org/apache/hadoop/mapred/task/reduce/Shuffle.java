@@ -1025,7 +1025,7 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         LOG.debug("_____________jobTokenSecret.getFormat() is " + jobTokenSecret.getFormat());
         String encHash = SecureShuffleUtils.hashFromString(msgToEncode,
             jobTokenSecret);
-        LOG.debug("____before setRequestProperty");
+//        LOG.debug("____before setRequestProperty");
         // put url hash into http header
         connection.setRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH,
             encHash);
@@ -1648,7 +1648,8 @@ public class Shuffle<K, V> extends Task {// implements ExceptionReporter
         } // IGNORE
 
         while (numInFlight > 0 && mergeThrowable == null) {
-          LOG.debug(reduceTask.getTaskID() + " numInFlight = " + numInFlight);
+          ////too much debug info.
+//          LOG.debug(reduceTask.getTaskID() + " numInFlight = " + numInFlight);
           // the call to getCopyResult will either
           // 1) return immediately with a null or a valid CopyResult object,
           // or

@@ -81,6 +81,7 @@ import org.apache.hadoop.mapred.TaskLog.LogName;
 import org.apache.hadoop.mapred.TaskStatus.Phase;
 import org.apache.hadoop.mapred.TaskTrackerStatus.TaskTrackerHealthStatus;
 import org.apache.hadoop.mapred.pipes.Submitter;
+import org.apache.hadoop.mapred.task.reduce.Shuffle.ReduceCopier.MapOutputLocation;
 import org.apache.hadoop.mapreduce.TaskType;
 import org.apache.hadoop.mapreduce.security.SecureShuffleUtils;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
@@ -3853,21 +3854,23 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
    * to other nodes.
    */
   public static class MapOutputServlet extends HttpServlet {
+
     private static final long serialVersionUID = 1L;
     private static final int MAX_BYTES_TO_READ = 64 * 1024;
     
     private static LRUCache<String, Path> fileCache = new LRUCache<String, Path>(FILE_CACHE_SIZE);
     private static LRUCache<String, Path> fileIndexCache = new LRUCache<String, Path>(FILE_CACHE_SIZE);
     
+    private static ShufflePeerManager spm =  new ShufflePeerManager();
+    
+    
     @Override
-    public void doGet(HttpServletRequest request, 
-                      HttpServletResponse response
-                      ) throws ServletException, IOException {
+    public void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+      LOG.debug("_______enter doGet()");
       String mapId = request.getParameter("map");
       String reduceId = request.getParameter("reduce");
       String jobId = request.getParameter("job");
-
-      LOG.debug("_________get one request");
+      
       if (jobId == null) {
         throw new IOException("job parameter is required");
       }
@@ -3876,38 +3879,53 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         throw new IOException("map and reduce parameters are required");
       }
       
-      LOG.debug("______JobId,mapId,reduceId are " + jobId + " " + mapId + " " + reduceId);
       ServletContext context = getServletContext();
-      int reduce = Integer.parseInt(reduceId);
+      TaskTracker tracker = (TaskTracker) context.getAttribute("task.tracker");
+      LOG.info("~~~~~~TaskTracker is " + tracker.getHostname());
+//      JobConf conf = (JobConf) context.getAttribute("conf");
+      ////verify request, and will modify response.
+      verifyRequest(request, response, tracker, jobId);
+      LOG.debug("________after verifyRequest");
+//      JobConf conf = (JobConf) context.getAttribute("conf");
+      spm.addPeer(request, response);
+      if (!spm.isEmpty() && spm.needScheduled())
+      {
+        runShuffle(context,tracker);
+      }
+    }
+    
+
+    // ensure peer list is not null before call this method.
+    private void runShuffle(ServletContext context, TaskTracker tracker) throws IOException {
+      LOG.info("____________enter runShuffle");
+      ShufflePeer sp = spm.getPeer();
+      HttpServletResponse response = sp.getResponse();
+      JobConf conf = (JobConf) context.getAttribute("conf");
+      
+      int reduce = sp.getIntShuffleId();
+      String shuffleId = sp.getStringShuffleId();
+      String mapId = sp.getMapId();
+      String jobId = sp.getJobId();
+      
       byte[] buffer = new byte[MAX_BYTES_TO_READ];
       // true iff IOException was caused by attempt to access input
       boolean isInputException = true;
       OutputStream outStream = null;
-      FileInputStream mapOutputIn = null;
+      FileInputStream mapOutputIn = null; //open the map-output for read.
  
       long totalRead = 0;
-      ShuffleServerInstrumentation shuffleMetrics =
-        (ShuffleServerInstrumentation) context.getAttribute("shuffleServerMetrics");
-      ////debug 
-      if (shuffleMetrics == null)
-      {
-        LOG.debug("_______shuffleMetrics is null");
-      }
-      TaskTracker tracker = 
-        (TaskTracker) context.getAttribute("task.tracker");
-      ShuffleExceptionTracker shuffleExceptionTracking =
-        (ShuffleExceptionTracker) context.getAttribute("shuffleExceptionTracking");
+      ShuffleServerInstrumentation shuffleMetrics = (ShuffleServerInstrumentation) context.getAttribute("shuffleServerMetrics");
+      ShuffleExceptionTracker shuffleExceptionTracking = (ShuffleExceptionTracker) context.getAttribute("shuffleExceptionTracking");
 
-      verifyRequest(request, response, tracker, jobId);
-
+      LOG.info("____________before try-catch.");
       long startTime = 0;
       try {
         shuffleMetrics.serverHandlerBusy();
         if(ClientTraceLog.isInfoEnabled())
           startTime = System.nanoTime();
-        LOG.debug("_______to here~!");
+        ////debug
+        LOG.info("_______before outStream = response.getOutStream!");
         outStream = response.getOutputStream();
-        JobConf conf = (JobConf) context.getAttribute("conf");
         LocalDirAllocator lDirAlloc = 
           (LocalDirAllocator)context.getAttribute("localDirAllocator");
         FileSystem rfs = ((LocalFileSystem)
@@ -3923,6 +3941,9 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         userName = rjob.jobConf.getUser();
         runAsUserName = tracker.getTaskController().getRunAsUser(rjob.jobConf);
       }
+      
+      
+      LOG.info("_________before fileIndexCache and fileCache");
       // Index file
       String intermediateOutputDir = TaskTracker.getIntermediateOutputDir(userName, jobId, mapId);
       String indexKey = intermediateOutputDir + "/file.out.index";
@@ -3969,7 +3990,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         
         //use the same buffersize as used for reading the data from disk
         response.setBufferSize(MAX_BYTES_TO_READ);
-        
+        LOG.info("_______________after response.set***");
         /**
          * Read the data from the sigle map-output file and
          * send it to the reducer.
@@ -3977,12 +3998,13 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         //open the map-output file
         mapOutputIn = SecureIOUtils.openForRead(
             new File(mapOutputFileName.toUri().getPath()), runAsUserName);
-
+        LOG.info("___________after open file for read.");
         //seek to the correct offset for the reduce
         mapOutputIn.skip(info.startOffset);
         long rem = info.partLength;
         int len =
           mapOutputIn.read(buffer, 0, (int)Math.min(rem, MAX_BYTES_TO_READ));
+        LOG.info("__________after read file one time.");
         while (rem > 0 && len >= 0) {
           rem -= len;
           try {
@@ -4006,7 +4028,7 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
 
       } catch (IOException ie) {
         Log log = (Log) context.getAttribute("log");
-        String errorMsg = ("getMapOutput(" + mapId + "," + reduceId + 
+        String errorMsg = ("getMapOutput(" + mapId + "," + shuffleId + 
                            ") failed :\n"+
                            StringUtils.stringifyException(ie));
         log.warn(errorMsg);
@@ -4027,16 +4049,17 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         shuffleMetrics.serverHandlerFree();
         if (ClientTraceLog.isInfoEnabled()) {
           ClientTraceLog.info(String.format(MR_CLIENTTRACE_FORMAT,
-                request.getLocalAddr() + ":" + request.getLocalPort(),
-                request.getRemoteAddr() + ":" + request.getRemotePort(),
+                sp.getLocalAddr() + ":" + sp.getLocalPort(),
+                sp.getRemoteAddr() + ":" + sp.getRemotePort(),
                 totalRead, "MAPRED_SHUFFLE", mapId, endTime-startTime));
         }
       }
       outStream.close();
       shuffleExceptionTracking.success();
       shuffleMetrics.successOutput();
+      
     }
-    
+
 
     /**
      * verify that request has correct HASH for the url
@@ -4050,9 +4073,8 @@ public class TaskTracker implements MRConstants, TaskUmbilicalProtocol,
         HttpServletResponse response, TaskTracker tracker, String jobId) 
     throws IOException {
       
-      LOG.debug("__________enter verifyRequest.");
-      LOG.debug("__________tasktracker is " + tracker.getName());
-      LOG.debug("__________jobId is " + jobId);
+      ////debug
+      LOG.info("__________enter verifyRequest.");
       
       SecretKey tokenSecret = tracker.getJobTokenSecretManager()
           .retrieveTokenSecret(jobId);
